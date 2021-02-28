@@ -3,8 +3,8 @@ library(LaplacesDemon)
 
 # generate data from a three-component normal mixture model
 N = 200
-mixing_p = c(0.4, 0.30, 0.4)
-mu = c(-2, -9, 4)
+mixing_p = c(0.3, 0.50, 0.2)
+mu = c(-2, -8, 4)
 prec = c(1/3, 1/3, 1/4)
 sigma = sqrt(1/prec)
 
