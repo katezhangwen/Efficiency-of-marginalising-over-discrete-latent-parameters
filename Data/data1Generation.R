@@ -1,12 +1,11 @@
-set.seed(1056915)
+set.seed(201229)
 library(LaplacesDemon)
 
-# this data set will generate node inconsistency error, not used
 # generate data from a two-component normal mixture model
-N = 80
-mixing_p = c(0.35, 0.65)
-mu = c(34, 62)
-prec = c(1/81, 1/16)
+N = 350
+mixing_p = c(0.20, 0.80)
+mu = c(10, -2)
+prec = c(1/4, 1/25)
 sigma = sqrt(1/prec)
 
 I = numeric(N)
@@ -23,6 +22,6 @@ hist(x, breaks = 15)
 plot(density(x))
 
 
-write.table(x, file = "data1.txt", 
+write.table(x, file = "data2.txt", 
             row.names = FALSE, col.names = FALSE)
 

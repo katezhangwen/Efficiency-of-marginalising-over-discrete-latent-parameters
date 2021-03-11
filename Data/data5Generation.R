@@ -1,11 +1,15 @@
 set.seed(201229)
 library(LaplacesDemon)
 
+# we originally worked with the previous 5 data sets only, this data set
+# was generated to investigate the impact of data with two clearly
+# identifiable components on our computation time
+
 # generate data from a two-component normal mixture model
-N = 950
-mixing_p = c(0.50, 0.50)
-mu = c(10, -10)
-prec = c(1/81, 1/64)
+N = 350
+mixing_p = c(0.40, 0.60)
+mu = c(7, -12)
+prec = c(1, 4)
 sigma = sqrt(1/prec)
 
 I = numeric(N)
@@ -22,6 +26,6 @@ hist(x, breaks = 15)
 plot(density(x))
 
 
-
-write.table(x, file = "data5.txt", 
+write.table(x, file = "data6.txt", 
             row.names = FALSE, col.names = FALSE)
+

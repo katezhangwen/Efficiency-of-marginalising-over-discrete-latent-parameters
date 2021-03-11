@@ -2,10 +2,10 @@ set.seed(201229)
 library(LaplacesDemon)
 
 # generate data from a two-component normal mixture model
-N = 350
-mixing_p = c(0.20, 0.80)
-mu = c(10, -2)
-prec = c(1/4, 1/25)
+N = 800
+mixing_p = c(0.60, 0.40)
+mu = c(0, -1)
+prec = c(9, 4)
 sigma = sqrt(1/prec)
 
 I = numeric(N)
@@ -22,6 +22,7 @@ hist(x, breaks = 15)
 plot(density(x))
 
 
-write.table(x, file = "data2.txt", 
+
+write.table(x, file = "data3.txt", 
             row.names = FALSE, col.names = FALSE)
 

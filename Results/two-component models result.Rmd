@@ -15,6 +15,7 @@ knitr::opts_chunk$set(echo = TRUE)
 require(rjags)
 require(coda)
 require(here)
+require(rstan)
 load.module("mix")
 NT <- 6 # number of trials
 ```
@@ -111,7 +112,7 @@ mu = c(10, -2)
 prec = c(1/4, 1/25)
 sigma = sqrt(1/prec)
 ```{r data1 density, echo=FALSE}
-x <- as.numeric(unlist(read.table(here("Data", "data2.txt"))))
+x <- as.numeric(unlist(read.table(here("Data", "data1.txt"))))
 plot(density(x), main="data1")
 ```
 
@@ -129,7 +130,7 @@ resultr <- array(rep(0, 12*NT), dim=c(3,4,NT),
                                 c("fit","sam","ess","res"),
                                 sprintf("t%d",1:NT)))
 
-r1 <- sampling(here("Data", "data2.txt"), result, resultr)
+r1 <- sampling(here("Data", "data1.txt"), result, resultr)
 ```
 
 
@@ -145,13 +146,13 @@ mu = c(0, -1)
 prec = c(9, 4)
 sigma = sqrt(1/prec)
 ```{r data2 density}
-x <- as.numeric(unlist(read.table(here("Data", "data3.txt"))))
+x <- as.numeric(unlist(read.table(here("Data", "data2.txt"))))
 plot(density(x), main="data2")
 ```
 
 ```{r sampling with data2, echo=FALSE, include= FALSE}
 
-r2 <- sampling(here("Data", "data3.txt"), result, resultr)
+r2 <- sampling(here("Data", "data2.txt"), result, resultr)
 ```
 
 ```{r data2 gathering result}
@@ -166,12 +167,12 @@ mu = c(8, -10)
 prec = c(1/9, 1/4)
 sigma = sqrt(1/prec)
 ```{r data3 density}
-x <- as.numeric(unlist(read.table(here("Data", "data4.txt"))))
+x <- as.numeric(unlist(read.table(here("Data", "data3.txt"))))
 plot(density(x), main="data3")
 ```
 
 ```{r sampling with data3, echo=FALSE, include= FALSE}
-r3 <- sampling(here("Data", "data4.txt"), result, resultr)
+r3 <- sampling(here("Data", "data3.txt"), result, resultr)
 ```
 
 ```{r data3 gathering result}
@@ -186,12 +187,12 @@ mu = c(10, -10)
 prec = c(1/81, 1/64)
 sigma = sqrt(1/prec)
 ```{r data4 density}
-x <- as.numeric(unlist(read.table(here("Data", "data5.txt"))))
+x <- as.numeric(unlist(read.table(here("Data", "data4.txt"))))
 plot(density(x), main="data4")
 ```
 
 ```{r sampling with data4, echo=FALSE, include= FALSE}
-r4 <- sampling(here("Data", "data5.txt"), result, resultr)
+r4 <- sampling(here("Data", "data4.txt"), result, resultr)
 ```
 
 ```{r data4 gathering result}
@@ -206,12 +207,12 @@ mu = c(7, -12)
 prec = c(1, 4)
 sigma = sqrt(1/prec)
 ```{r data5 density}
-x <- as.numeric(unlist(read.table(here("Data", "data6.txt"))))
+x <- as.numeric(unlist(read.table(here("Data", "data5.txt"))))
 plot(density(x), main="data5")
 ```
 
 ```{r sampling with data5, echo=FALSE, include= FALSE}
-r5 <- sampling(here("Data", "data6.txt"), result, resultr)
+r5 <- sampling(here("Data", "data5.txt"), result, resultr)
 ```
 
 ```{r data5 gathering result}
