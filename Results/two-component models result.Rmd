@@ -276,7 +276,7 @@ n_all_data[4,]=t_data[2,]
 n_all_data[1,] = t_data[5,]
 n_all_data[2,] = t_data[1,]
 
-n_rnames <- factor(c("stan","m1","m1r","m2(r)","m3(r)"))
+n_rnames <- factor(c("astan","m1","m1r","m2(r)","m3(r)"))
 n_all_data.df <- as.data.frame(n_all_data)
 n_all_data.df <- cbind(n_rnames, n_all_data.df)
 m_n_all_data.df <- melt(n_all_data.df,id=c("n_rnames"))
