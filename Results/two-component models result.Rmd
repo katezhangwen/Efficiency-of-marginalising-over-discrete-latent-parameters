@@ -56,18 +56,28 @@ res_sampler <- function(){
 
 
 
-sampling <- function(datafile, result, resultr){
+sampling <- function(datafile, result, resultr, resultstan){
   # set up
   all_sampler()
   data <- read.table(datafile)
   y <- data[,1]
   iterations <- 3000
   burnin <- floor(iterations/2)
-  chains <- 2
+  chains <- 3
   
   N <- nrow(data)
   data_jags <- list(N=N, y=y)
   parameters = c("mu", "sigma", "mixing_p","z")
+  
+   # with stan
+  for(i in 1:NT){
+      resultstan[1,i]<- system.time(model_fit <- stan(file = here("Models","two-componentModel.stan"), 
+                        data = data_jags, iter=iterations, chain=chains,
+                        warmup=burnin))["elapsed"]
+      resultstan[2,i] <- min(summary(model_fit)$summary[,"n_eff"][1:6])
+      resultstan[3,i] <- resultstan[1,i]/resultstan[2,i]
+      
+    } 
   
   # with unrestricted models
   
@@ -97,13 +107,18 @@ sampling <- function(datafile, result, resultr){
       
       resultr[j,4,i] <- (resultr[j,1,i]+resultr[j,2,i])/resultr[j,3,i]                                                            
     } 
+    
+   
   }
   
-  return(list(result=result, resultr=resultr))
+
+  
+  return(list(result=result, resultr=resultr, resultstan=resultstan))
 }
 
 
 ```
+
 
 # With data1:
 N = 350
@@ -130,13 +145,18 @@ resultr <- array(rep(0, 12*NT), dim=c(3,4,NT),
                                 c("fit","sam","ess","res"),
                                 sprintf("t%d",1:NT)))
 
-r1 <- sampling(here("Data", "data1.txt"), result, resultr)
+resultstan <- array(rep(0, 3*NT), dim=c(3,NT), 
+                dimnames = list(c("time","ess","stan"),
+                                sprintf("t%d",1:NT)))
+
+r1 <- sampling(here("Data", "data1.txt"), result, resultr, resultstan)
 ```
 
 
 ```{r data1 gathering result}
-data1 <- c(rowMeans(r1$result[,4,]), rowMeans(r1$resultr[,4,]))
-boxplot(t(rbind(r1$result[,4,],r1$resultr[,4,])),main="data1")
+data1 <- c(rowMeans(r1$result[,4,]), rowMeans(r1$resultr[,4,]),rowMeans(r1$resultstan)[3])
+boxplot(t(rbind(r1$result[,4,],r1$resultr[,4,],r1$resultstan[3:3,,drop=FALSE])),main="data1")
+data1
 ```
 
 # With data2:
@@ -152,12 +172,12 @@ plot(density(x), main="data2")
 
 ```{r sampling with data2, echo=FALSE, include= FALSE}
 
-r2 <- sampling(here("Data", "data2.txt"), result, resultr)
+r2 <- sampling(here("Data", "data2.txt"), result, resultr, resultstan)
 ```
 
 ```{r data2 gathering result}
-data2 <- c(rowMeans(r2$result[,4,]), rowMeans(r2$resultr[,4,]))
-boxplot(t(rbind(r2$result[,4,],r2$resultr[,4,])),main="data2")
+data2 <- c(rowMeans(r2$result[,4,]), rowMeans(r2$resultr[,4,]),rowMeans(r2$resultstan)[3])
+boxplot(t(rbind(r2$result[,4,],r2$resultr[,4,],r2$resultstan[3:3,,drop=FALSE])),main="data2")
 ```
 
 # With data3:
@@ -172,12 +192,12 @@ plot(density(x), main="data3")
 ```
 
 ```{r sampling with data3, echo=FALSE, include= FALSE}
-r3 <- sampling(here("Data", "data3.txt"), result, resultr)
+r3 <- sampling(here("Data", "data3.txt"), result, resultr, resultstan)
 ```
 
 ```{r data3 gathering result}
-data3 <- c(rowMeans(r3$result[,4,]), rowMeans(r3$resultr[,4,]))
-boxplot(t(rbind(r3$result[,4,],r3$resultr[,4,])),main="data3")
+data3 <- c(rowMeans(r3$result[,4,]), rowMeans(r3$resultr[,4,]),rowMeans(r3$resultstan)[3])
+boxplot(t(rbind(r3$result[,4,],r3$resultr[,4,],r3$resultstan[3:3,,drop=FALSE])),main="data3")
 ```
 
 # With data4:
@@ -192,12 +212,12 @@ plot(density(x), main="data4")
 ```
 
 ```{r sampling with data4, echo=FALSE, include= FALSE}
-r4 <- sampling(here("Data", "data4.txt"), result, resultr)
+r4 <- sampling(here("Data", "data4.txt"), result, resultr, resultstan)
 ```
 
 ```{r data4 gathering result}
-data4 <- c(rowMeans(r4$result[,4,]), rowMeans(r4$resultr[,4,]))
-boxplot(t(rbind(r4$result[,4,],r4$resultr[,4,])),main="data4")
+data4 <- c(rowMeans(r4$result[,4,]), rowMeans(r4$resultr[,4,]),rowMeans(r4$resultstan)[3])
+boxplot(t(rbind(r4$result[,4,],r4$resultr[,4,],r4$resultstan[3:3,,drop=FALSE])),main="data4")
 ```
 
 # With data5:
@@ -212,12 +232,12 @@ plot(density(x), main="data5")
 ```
 
 ```{r sampling with data5, echo=FALSE, include= FALSE}
-r5 <- sampling(here("Data", "data5.txt"), result, resultr)
+r5 <- sampling(here("Data", "data5.txt"), result, resultr, resultstan)
 ```
 
 ```{r data5 gathering result}
-data5 <- c(rowMeans(r5$result[,4,]), rowMeans(r5$resultr[,4,]))
-boxplot(t(rbind(r5$result[,4,],r5$resultr[,4,])),main="data5")
+data5 <- c(rowMeans(r5$result[,4,]), rowMeans(r5$resultr[,4,]),rowMeans(r5$resultstan)[3])
+boxplot(t(rbind(r5$result[,4,],r5$resultr[,4,],r5$resultstan[3:3,,drop=FALSE])),main="data5")
 ```
 
 
@@ -226,19 +246,19 @@ library(ggplot2)
 library(reshape2)
 all_data <- matrix(c(data1,data2,data3,data4,data5), ncol=5, byrow=FALSE)
 colnames(all_data) <- factor(c("data1", "data2","data3","data4","data5"))
-rnames <- factor(c("m1","m2","m3","mr1","mr2","mr3"))
+rnames <- factor(c("m1","m2","m3","mr1","mr2","mr3","stan"))
 all_data.df <- as.data.frame(all_data)
 all_data.df <- cbind(rnames, all_data.df)
 m_all_data.df <- melt(all_data.df,id=c("rnames"))
 
 ggplot(m_all_data.df, aes(x=as.numeric(rnames), y=value, col=variable))+ geom_point()+
   geom_line()+
-  scale_y_log10(breaks=c(1e-3,1e-2,1e-1,0.5,2.5),limits = c(0.001,2.5))+
+  scale_y_log10(breaks=c(1e-3,1e-2,1e-1,0.5,2.5),limits = c(0.001,5))+
   ylab("Time per effective sample(s)")+
   xlab("models")+
   ggtitle("Computation time for the six models") +
-  scale_x_continuous(labels=c("m1","m2","m3","m1r","m2r","m3r"),
-                     breaks=c(1,2,3,4,5,6))+
+  scale_x_continuous(labels=c("m1","m2","m3","m1r","m2r","m3r","stan"),
+                     breaks=c(1,2,3,4,5,6,7))+
   theme(legend.position = "right",legend.title = element_blank(),
         panel.grid.minor = element_blank())
 ```
@@ -247,26 +267,28 @@ t_data=all_data
 
 t_data[2,]=colMeans(rbind(all_data[2,],all_data[5,]))
 t_data[3,]=colMeans(rbind(all_data[3,],all_data[6,]))
-t_data = t_data[1:4,]
+t_data[5,]=t_data[7,]
+t_data = t_data[1:5,]
 n_all_data = t_data
-n_all_data[2,]=t_data[4,]
-n_all_data[4,]=t_data[3,]
-n_all_data[3,]=t_data[2,]
+n_all_data[3,]=t_data[4,]
+n_all_data[5,]=t_data[3,]
+n_all_data[4,]=t_data[2,]
+n_all_data[1,] = t_data[5,]
+n_all_data[2,] = t_data[1,]
 
-
-n_rnames <- factor(c("m1","m1r","m2(r)","m3(r)"))
+n_rnames <- factor(c("stan","m1","m1r","m2(r)","m3(r)"))
 n_all_data.df <- as.data.frame(n_all_data)
 n_all_data.df <- cbind(n_rnames, n_all_data.df)
 m_n_all_data.df <- melt(n_all_data.df,id=c("n_rnames"))
 
 ggplot(m_n_all_data.df, aes(x=as.numeric(n_rnames), y=value, col=variable))+ geom_point()+
   geom_line()+
-  scale_y_log10(breaks=c(1e-3,1e-2,1e-1,2.5),limits = c(0.001,2.5))+
+  scale_y_log10(breaks=c(1e-3,1e-2,1e-1,2.5),limits = c(0.001,4))+
   ylab("Time per effective sample(s)")+
   xlab("models")+
   ggtitle("Computation time for four models") +
-  scale_x_continuous(labels=c("m1","m1r","m2(r)","m3(r)"),
-                     breaks=c(1,2,3,4))+
+  scale_x_continuous(labels=c("stan","m1","m1r","m2(r)","m3(r)"),
+                     breaks=c(1,2,3,4,5))+
   theme(legend.position = "right",legend.title = element_blank(),
         panel.grid.minor = element_blank())
 
