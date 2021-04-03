@@ -1,0 +1,56 @@
+# Dawid Skene Model marginalised with zeros trick 
+
+data {
+
+  C <- 100000 # This is to ensure that lamda >0
+
+  for(i in 1:I){
+       zeros[i] <- 0
+    }
+}
+  
+model {
+  
+  # likelihood
+  for(i in 1:I){
+    zeros[i] ~ dpois(lambda[i])
+    lambda[i] <- -log(L[i])+C
+    for(k in 1:K){
+      for(n in 1:N){
+        indicator1[i,k,n] <- ifelse(ii[n]==i,theta[jj[n],k,y[n]],1)
+      }
+      indicator2[i,k] <- pi[k]*prod(indicator1[i,k,1:N])
+    }
+    L[i] <- sum(indicator2[i,1:K])
+    
+    # inference for z
+    for(k in 1:K){
+      z_comp[i,k] = k*indicator2[i,k]/L[i]
+    }
+    z[i] = sum(z_comp[i,1:K])
+  }
+
+  # prior 
+  pi ~ ddirich(rep(3.0,K))
+  
+  for(k in 1:K){
+    for(j in 1:J){
+      theta[j,k,1:K] ~ ddirich(beta[k,1:K])
+    }
+  }
+  
+  # getting beta
+  Nn = 8 # pseudocount of hypothetical prior observations
+  p = 0.6 # approximate probability of a correct rating
+  for (k1 in 1:K){
+    for (k2 in 1:K){
+      beta[k1,k2] <- ifelse(k1==k2,Nn*p,Nn*(1-p)/(K-1))
+    }
+  }
+  
+
+
+}
+
+
+

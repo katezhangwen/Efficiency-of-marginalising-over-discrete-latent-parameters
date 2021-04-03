@@ -1,0 +1,39 @@
+# Dawid Skene Model
+  
+  
+model {
+  
+  # likelihood
+  
+  for(i in 1:I){
+    z[i] ~ dcat(pi)
+  }
+  
+  for(i in 1:N){
+    y[i] ~ dcat(theta[jj[i],z[ii[i]],1:K])
+  }
+  
+  
+  # prior 
+  pi ~ ddirich(rep(3.0,K))
+  
+  for(k in 1:K){
+    for(j in 1:J){
+      theta[j,k,1:K] ~ ddirich(beta[k,1:K])
+    }
+  }
+  
+  # getting beta
+  Nn = 8 # pseudocount of hypothetical prior observations
+  p = 0.6 # approximate probability of a correct rating
+  for (k1 in 1:K){
+    for (k2 in 1:K){
+      beta[k1,k2] <- ifelse(k1==k2,Nn*p,Nn*(1-p)/(K-1))
+    }
+  }
+
+
+}
+
+
+
