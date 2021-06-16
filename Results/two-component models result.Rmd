@@ -11,13 +11,15 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Computation time for two-component models
 
-```{r setting up}
+```{r setting up, include=FALSE}
 require(rjags)
 require(coda)
 require(here)
 require(rstan)
+options(mc.cores = parallel::detectCores())
+rstan_options(auto_write = TRUE)
 load.module("mix")
-NT <- 6 # number of trials
+NT <- 3 # number of trials
 ```
 
 ```{r functions, include=FALSE}
@@ -61,7 +63,7 @@ sampling <- function(datafile, result, resultr, resultstan){
   all_sampler()
   data <- read.table(datafile)
   y <- data[,1]
-  iterations <- 3000
+  iterations <- 5000
   burnin <- floor(iterations/2)
   chains <- 3
   
@@ -71,9 +73,9 @@ sampling <- function(datafile, result, resultr, resultstan){
   
    # with stan
   for(i in 1:NT){
-      resultstan[1,i]<- system.time(model_fit <- stan(file = here("Models","two-componentModel.stan"), 
+      resultstan[1,i]<- system.time(suppressMessages(model_fit <- stan(file = here("Models","two-componentModel.stan"), 
                         data = data_jags, iter=iterations, chain=chains,
-                        warmup=burnin))["elapsed"]
+                        warmup=burnin)))["elapsed"]
       resultstan[2,i] <- min(summary(model_fit)$summary[,"n_eff"][1:6])
       resultstan[3,i] <- resultstan[1,i]/resultstan[2,i]
       
@@ -131,7 +133,7 @@ x <- as.numeric(unlist(read.table(here("Data", "data1.txt"))))
 plot(density(x), main="data1")
 ```
 
-```{r sampling with data1, echo=FALSE, include= FALSE}
+```{r sampling with data1}
 # three dimensional array for storing data
 # 3 - 3 models
 # 4 - 1:fit.time, 2:sample.tim, 3:ess, 4:(fit+sam)/ess
@@ -157,6 +159,7 @@ r1 <- sampling(here("Data", "data1.txt"), result, resultr, resultstan)
 data1 <- c(rowMeans(r1$result[,4,]), rowMeans(r1$resultr[,4,]),rowMeans(r1$resultstan)[3])
 boxplot(t(rbind(r1$result[,4,],r1$resultr[,4,],r1$resultstan[3:3,,drop=FALSE])),main="data1")
 data1
+r1$resultstan
 ```
 
 # With data2:
@@ -170,7 +173,7 @@ x <- as.numeric(unlist(read.table(here("Data", "data2.txt"))))
 plot(density(x), main="data2")
 ```
 
-```{r sampling with data2, echo=FALSE, include= FALSE}
+```{r sampling with data2}
 
 r2 <- sampling(here("Data", "data2.txt"), result, resultr, resultstan)
 ```
@@ -178,6 +181,7 @@ r2 <- sampling(here("Data", "data2.txt"), result, resultr, resultstan)
 ```{r data2 gathering result}
 data2 <- c(rowMeans(r2$result[,4,]), rowMeans(r2$resultr[,4,]),rowMeans(r2$resultstan)[3])
 boxplot(t(rbind(r2$result[,4,],r2$resultr[,4,],r2$resultstan[3:3,,drop=FALSE])),main="data2")
+r2$resultstan
 ```
 
 # With data3:
@@ -191,13 +195,15 @@ x <- as.numeric(unlist(read.table(here("Data", "data3.txt"))))
 plot(density(x), main="data3")
 ```
 
-```{r sampling with data3, echo=FALSE, include= FALSE}
+```{r sampling with data3}
 r3 <- sampling(here("Data", "data3.txt"), result, resultr, resultstan)
+
 ```
 
 ```{r data3 gathering result}
 data3 <- c(rowMeans(r3$result[,4,]), rowMeans(r3$resultr[,4,]),rowMeans(r3$resultstan)[3])
 boxplot(t(rbind(r3$result[,4,],r3$resultr[,4,],r3$resultstan[3:3,,drop=FALSE])),main="data3")
+r3$resultstan
 ```
 
 # With data4:
@@ -209,15 +215,33 @@ sigma = sqrt(1/prec)
 ```{r data4 density}
 x <- as.numeric(unlist(read.table(here("Data", "data4.txt"))))
 plot(density(x), main="data4")
+
+# data <- read.table(here("Data", "data4.txt"))
+# y <- data[,1]
+# iterations <- 4000
+# burnin <- floor(iterations/2)
+# chains <- 3
+#   
+# N <- nrow(data)
+# data_jags <- list(N=N, y=y)
+# parameters = c("mu", "sigma", "mixing_p","z")
+# 
+# s_data <- 
+# model_fit <- stan(file = here("Models","two-componentModel.stan"), 
+#                         data = data_jags, iter=iterations, chain=chains,
+#                         warmup=burnin)
+# summary(model_fit)
+
 ```
 
-```{r sampling with data4, echo=FALSE, include= FALSE}
+```{r sampling with data4}
 r4 <- sampling(here("Data", "data4.txt"), result, resultr, resultstan)
 ```
 
 ```{r data4 gathering result}
 data4 <- c(rowMeans(r4$result[,4,]), rowMeans(r4$resultr[,4,]),rowMeans(r4$resultstan)[3])
 boxplot(t(rbind(r4$result[,4,],r4$resultr[,4,],r4$resultstan[3:3,,drop=FALSE])),main="data4")
+r4$resultstan
 ```
 
 # With data5:
@@ -231,13 +255,14 @@ x <- as.numeric(unlist(read.table(here("Data", "data5.txt"))))
 plot(density(x), main="data5")
 ```
 
-```{r sampling with data5, echo=FALSE, include= FALSE}
+```{r sampling with data5}
 r5 <- sampling(here("Data", "data5.txt"), result, resultr, resultstan)
 ```
 
 ```{r data5 gathering result}
 data5 <- c(rowMeans(r5$result[,4,]), rowMeans(r5$resultr[,4,]),rowMeans(r5$resultstan)[3])
 boxplot(t(rbind(r5$result[,4,],r5$resultr[,4,],r5$resultstan[3:3,,drop=FALSE])),main="data5")
+r5$resultstan
 ```
 
 

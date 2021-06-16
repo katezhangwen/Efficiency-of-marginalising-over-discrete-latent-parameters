@@ -16,6 +16,8 @@ require(rjags)
 require(coda)
 require(here)
 require(rstan)
+options(mc.cores = parallel::detectCores())
+rstan_options(auto_write = TRUE)
 load.module("mix")
 NT <- 6 # number of trials
 ```
@@ -62,7 +64,7 @@ sampling <- function(datafile, result, resultr, resultstan){
   all_sampler()
   data <- read.table(datafile)
   y <- data[,1]
-  iterations <- 3000
+  iterations <- 5000
   burnin <- floor(iterations/2)
   chains <- 3
   
@@ -76,7 +78,7 @@ sampling <- function(datafile, result, resultr, resultstan){
                                     here("Models","three-componentModel.stan"), 
                         data = data_jags, iter=iterations, chain=chains,
                         warmup=burnin))["elapsed"]
-      resultstan[2,i] <- min(summary(model_fit)$summary[,"n_eff"][1:6])
+      resultstan[2,i] <- min(summary(model_fit)$summary[,"n_eff"][0:9])
       resultstan[3,i] <- resultstan[1,i]/resultstan[2,i]
       
     }   

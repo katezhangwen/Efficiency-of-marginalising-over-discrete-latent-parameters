@@ -1,0 +1,323 @@
+---
+title: "Dawid-Skene-anesthesia"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+library("rater")
+require(rjags)
+require(coda)
+require(here)
+require(rstan)
+options(mc.cores = parallel::detectCores())
+rstan_options(auto_write = TRUE)
+
+NT <- 2 # number of trials
+set.seed(123)
+```
+
+```{r compile, include=FALSE}
+rater(anesthesia, dawid_skene())
+```
+
+
+```{r jags and stan setup, include=FALSE}
+data("anesthesia", package = "rater")
+load(file = here("data","anesthesia.rda"))
+N <- nrow(anesthesia) # total number of annotations
+K <- 4 # number of annotation categories
+I <- 45 # number of items
+J <- 5 # number of annotators
+ii <- anesthesia$item # item index for annotation n
+jj <- anesthesia$rater # annotator for annotation n
+y <- anesthesia$rating # annotation for observation n
+
+
+# alpha <- rep(3,K)
+# n <- 8 # pseudocount of hypothetical prior observations
+# p <- 0.6 # approximate probability of a correct rating
+# beta <- array((n*(1-p)/(K-1)),c(J,K,K))
+# beta
+# for(j in 1:J){
+#   for (k in 1:K){
+#     beta[j,k,k] <- n*p
+#   }
+# }
+  
+
+data_jags <- list(N=N, y=y, K=K, I=I, J=J, ii=ii, jj=jj)
+# data_stan <- list(N=N, y=y, K=K, I=I, J=J, ii=ii, jj=jj,beta=beta, alpha=alpha)
+
+iterations <- 6000
+burnin <- floor(iterations/2)
+chains <- 3
+
+parameters = c("pi", "theta","z")
+```
+
+```{r sampling, include=FALSE}
+t <- 1 # trial number
+
+repeat{
+  # record jags computation time 
+  assign(paste("time_jags", t, sep = ""), 
+         system.time(model.fit <- 
+                       jags.model(file =here("Models","Dawid-Skene.txt"), 
+                                  data=data_jags, 
+                                  n.chains=chains))["elapsed"]
+         + system.time(model.samples <- 
+                         coda.samples(model.fit, parameters, 
+                                      n.iter=iterations))["elapsed"]) 
+  
+  # record jags ess
+  assign(paste("ess_jags", t, sep = ""), effectiveSize(model.samples)[0:84])
+  
+  # record jags time per min ess 
+  assign(paste("timeperminess_jags", t, sep = ""), 
+         eval(as.name(paste("time_jags", t, sep = "")))/
+           min(eval(as.name(paste("ess_jags", t, sep = "")))))
+  
+  # record jags time per mann ess 
+  assign(paste("timepermeaness_jags", t, sep = ""), 
+         eval(as.name(paste("time_jags", t, sep = "")))/
+           mean(eval(as.name(paste("ess_jags", t, sep = "")))))
+  
+  # record jags model
+  assign(paste("model_jags", t, sep = ""), model.samples)
+  
+  # record stan computation time
+  assign(paste("time_stan", t, sep = ""),
+         system.time(model.fit <- rater(anesthesia, dawid_skene()))["elapsed"])
+
+  model_fit <- get_stanfit(model.fit)
+  
+  # assign(paste("time_stan", t, sep = ""), 
+  #        system.time(model_fit <- 
+  #                      suppressMessages(
+  #                        stan(file = here("Models","DawidSkene.stan"), 
+  #                             data = data_stan, iter=iterations, 
+  #                             chain=chains, warmup=burnin)))["elapsed"])
+  
+    
+  # record stan ess
+  assign(paste("ess_stan", t, sep=""), summary(model_fit)$summary[,"n_eff"][0:84])
+  
+  # record stan time per min ess 
+  assign(paste("timeperminess_stan", t, sep = ""), 
+         eval(as.name(paste("time_stan", t, sep = "")))/
+           min(eval(as.name(paste("ess_stan", t, sep = "")))))
+ 
+  # record stan time per mawn ess 
+  assign(paste("timepermeaness_stan", t, sep = ""), 
+         eval(as.name(paste("time_stan", t, sep = "")))/
+           mean(eval(as.name(paste("ess_stan", t, sep = ""))))) 
+  
+  
+  # record stan model
+  assign(paste("model_stan", t, sep = ""), model_fit)
+ 
+  # record rater model
+  assign(paste("model_rater", t, sep = ""), model.fit) 
+  
+  # record jags marginalised computation time 
+  assign(paste("time_jags_mar", t, sep = ""), 
+         system.time(model.fit <- 
+                       jags.model(file =here("Models","Dawid-Skene-marginalised.txt"), 
+                                  data=data_jags, 
+                                  n.chains=chains))["elapsed"]
+         + system.time(model.samples <- 
+                         coda.samples(model.fit, parameters, 
+                                      n.iter=iterations))["elapsed"]) 
+  
+  # record jags marginalised ess
+  assign(paste("ess_jags_mar", t, sep = ""), effectiveSize(model.samples)[0:84])
+  
+  # record jags marginalised time per min ess 
+  assign(paste("timeperminess_jags_mar", t, sep = ""), 
+         eval(as.name(paste("time_jags_mar", t, sep = "")))/
+           min(eval(as.name(paste("ess_jags_mar", t, sep = "")))))
+  
+  # record jags marginalised time per mann ess 
+  assign(paste("timepermeaness_jags_mar", t, sep = ""), 
+         eval(as.name(paste("time_jags_mar", t, sep = "")))/
+           mean(eval(as.name(paste("ess_jags_mar", t, sep = "")))))
+  
+  # record jags marginalised model
+  assign(paste("model_jags_mar", t, sep = ""), model.samples)
+  if (t == NT) break
+  
+  t <- t+1
+}
+
+```
+
+```{r gathering result, include=FALSE}
+trial <- 1:NT
+
+# vector of result of the trials
+
+temp <- paste("timeperminess_jags", trial, sep = "")
+lis_timeperminess_jags <- sapply(temp, as.name)
+lis_timeperminess_jags <- sapply(lis_timeperminess_jags, eval)
+
+temp <- paste("timeperminess_stan", trial, sep = "")
+lis_timeperminess_stan <- sapply(temp, as.name)
+lis_timeperminess_stan <- sapply(lis_timeperminess_stan, eval)
+
+temp <- paste("timeperminess_jags_mar", trial, sep = "")
+lis_timeperminess_jags_mar <- sapply(temp, as.name)
+lis_timeperminess_jags_mar <- sapply(lis_timeperminess_jags_mar, eval)
+
+temp <- paste("timepermeaness_jags", trial, sep = "")
+lis_timepermeaness_jags <- sapply(temp, as.name)
+lis_timepermeaness_jags <- sapply(lis_timepermeaness_jags, eval)
+
+temp <- paste("timepermeaness_stan", trial, sep = "")
+lis_timepermeaness_stan <- sapply(temp, as.name)
+lis_timepermeaness_stan <- sapply(lis_timepermeaness_stan, eval)
+
+temp <- paste("timepermeaness_jags_mar", trial, sep = "")
+lis_timepermeaness_jags_mar <- sapply(temp, as.name)
+lis_timepermeaness_jags_mar <- sapply(lis_timepermeaness_jags_mar, eval)
+```
+
+\newpage
+## Result
+### Main results using the minimum and the mean ESS across parameter
+
+```{r boxplot1,  echo=FALSE, fig.height=4, fig.width=5.5}
+
+boxplot(lis_timeperminess_jags, lis_timeperminess_stan,lis_timeperminess_jags_mar,main="time per effective sample(min)", names = c("jags", "stan", "marginalised"))
+
+```
+
+```{r boxplot2, fig.height=4, fig.width=5.5, echo=FALSE}
+boxplot(lis_timepermeaness_jags, lis_timepermeaness_stan,lis_timepermeaness_jags_mar,main="time per effective sample(mean)", names = c("jags", "stan", "marginalised"))
+```
+
+\newpage
+### Number of Effective Samples per second
+Comparison between JAGS and Stan
+```{r ess plots, echo=FALSE, fig.align='center'}
+order <- sort(names(ess_jags1))
+for(i in 1:NT){ 
+  jags_norm_ess <- eval(as.name(paste("ess_jags", i, sep = "")))[order][1:84]/
+                   eval(as.name(paste("time_jags", i, sep = "")))
+              
+  stan_norm_ess <-  eval(as.name(paste("ess_stan", i, sep = "")))[order][1:84]/
+                   eval(as.name(paste("time_stan", i, sep = "")))
+  
+  print(plot(jags_norm_ess,stan_norm_ess, xlab="JAGS", ylab="Stan", main = "Number of Effective Samples per second"))
+  
+}
+
+```
+
+## Convergence Diagnostic
+
+\newpage
+### Traceplot for Stan
+```{r traceplot stan, echo=FALSE}
+stan_p <- length(names(model_stan1)) # number of continuous parameter
+for(i in 1:NT){
+  for(j in seq(from = 1, to = stan_p, by =10)){
+    sprintf("Trial %d", i)
+    print(traceplot(eval(as.name(paste("model_stan", i, sep = ""))), 
+                    par = names(eval(as.name(paste("model_stan", i, sep = ""))))[j:(j+9)]))
+  }
+}
+```
+
+\newpage
+### Traceplot for JAGS
+
+```{r traceplot discrete, echo=FALSE}
+for(i in 1:NT){
+  sprintf("Trial %d", i)
+  par(mfrow = c(3,3))
+  coda::traceplot(eval(as.name(paste("model_jags", i, sep = ""))))
+}
+
+```
+
+\newpage
+
+### Looking at Rhat
+Looking at continuous paramters only
+For JAGS we used the gelman rubin diagnostic and looked at the upper CI
+
+```{r rhat for stan and discrete model, echo=FALSE}
+for(i in 1:NT){
+  print(paste("Trial",i))
+  rhat_stan <- mcmc_diagnostics(eval(as.name(paste("model_rater", i, sep = ""))))[,"Rhat"]
+  disc <- gelman.diag(eval(as.name(paste("model_jags", i, sep = ""))), multivariate = FALSE)
+  rhat_jags <- disc$psrf[1:84,"Upper C.I."][order[1:84]] # 129 in total, first 84 continuous
+  print(paste("max Rhat for stan:",max(rhat_stan)))
+  print(paste("max Rhat for JAGS:",max(rhat_jags)))
+  plot(rhat_jags, rhat_stan, xlab="Rhat JAGS", ylab="Rhat Stan")
+}
+
+```
+
+\newpage
+## Distribution of latent class
+### For Stan
+```{r error matrices stan, echo=FALSE}
+for (i in 1:NT){
+  p <- plot(eval(as.name(paste("model_rater", i, sep = ""))), "raters")
+  plot(p)
+}
+
+```
+
+
+\newpage
+### For JAGS
+
+```{r function for plotting table , include=FALSE}
+# taken fromhttps://elliotnoma.wordpress.com/2015/07/18/how-to-plot-a-table-of-values-in-r/
+plot_table <- function(d, marginColor,main="", text.cex=1.0)
+{
+plot(c(-1,ncol(d)),c(0,nrow(d)+1), type="n", xaxt="n", yaxt="n", xlab="",ylab="", bty="n")
+title(main, line = -10)
+for (c in 1:ncol(d)) {
+#rect(c-1, nrow(d), c, nrow(d) + 1, col=marginColor)
+text(c-.5,nrow(d) +.5,colnames(d)[c], cex=text.cex)
+}
+
+for (r in 1:nrow(d)) {
+#rect(-1, r-1, 0, r, col=marginColor)
+text(-.5, r-.5,rownames(d)[nrow(d) - r + 1], cex=text.cex)
+}
+
+for (r in 1:nrow(d))
+for (c in 1:ncol(d)) {
+rect(c-1, r-1, c, r)
+text(c-.5,r-.5,d[nrow(d) - r + 1,c], cex=text.cex)
+}
+}
+```
+
+
+```{r error matrices discrete, echo=FALSE, fig.height=3.5, fig.width=3.5}
+## error matrices for discrete model
+
+for(i in 1:NT){
+  sprintf("Trial %d", i)
+  disc <- summary(eval(as.name(paste("model_jags", i, sep = ""))))
+  thetas <- disc$statistics[order,"Mean"][5:84]
+  start <- 1
+  print(paste("JAGS trial",i, ":distribution of latent classes"))
+  while(start < length(thetas)){
+   tot_entry <- 16
+   accuracy <- thetas[start:(start+tot_entry-1)]
+   error_matrix <- matrix(accuracy, nrow = 4, byrow=TRUE)
+   #print(error_matrix)
+   plot_table(round(error_matrix,2), "gray", 
+              main= paste("rater",(start-1)/16+1,sep=""), text.cex=1)
+   start <- start + tot_entry
+  }
+  writeLines('\n')
+}
+
+```
