@@ -11,7 +11,7 @@ require(here)
 require(rstan)
 options(mc.cores = parallel::detectCores())
 rstan_options(auto_write = TRUE)
-
+load(file = here("data","anesthesia.rda"))
 NT <- 2 # number of trials
 set.seed(123)
 ```
@@ -23,7 +23,6 @@ rater(anesthesia, dawid_skene())
 
 ```{r jags and stan setup, include=FALSE}
 data("anesthesia", package = "rater")
-load(file = here("data","anesthesia.rda"))
 N <- nrow(anesthesia) # total number of annotations
 K <- 4 # number of annotation categories
 I <- 45 # number of items
