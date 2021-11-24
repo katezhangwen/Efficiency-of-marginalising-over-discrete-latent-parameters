@@ -1,0 +1,33 @@
+# two-component mixture discrete model
+  
+model {
+  
+  # likelihood
+  
+  for(i in 1:N){
+    y[i] ~ dnorm(mu[z[i]], prec[z[i]])
+    
+    # distribution(prior) of latent variable
+    # z can be either one or two
+    z[i] ~ dcat(mixing_p)
+  }
+  
+  # prior 
+  
+  # vague normal prior (centered at zero with small precision)
+  # here WLOG we assume mu[2]>mu[1] to give some identifiability
+  mu[1] ~ dnorm(0, 1/100)
+  mu[2] ~ dnorm(0, 1/100)T(mu[1],)
+  
+  sigma[1] ~ dlnorm(0, 1)T(0,)
+  sigma[2] ~ dlnorm(0, 1)T(0,)
+
+  prec[1] <- pow(sigma[1],-2)
+  prec[2] <- pow(sigma[2],-2)
+  
+  mixing_p ~ ddirich(c(1.0,1.0))
+   
+}
+
+
+

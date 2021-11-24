@@ -1,0 +1,70 @@
+# marginalised three-component mixture model with zeros trick
+
+data {
+
+  C <- 100000 # This is to ensure that lamda >0
+
+  for(i in 1:N){
+       zeros[i] <- 0
+    }
+  }
+  
+model {
+  
+  # likelihood
+
+  for(i in 1:N){
+    zeros[i] ~ dpois(lambda[i])
+    lambda[i] <- -log(L[i])+C
+    
+    L[i] <- mixing_p[1]*pow(prec[1],0.5)*0.399
+          *exp(-0.5*prec[1]*pow(y[i]-mu[1],2))+
+                mixing_p[2]*pow(prec[2],0.5)*0.399
+                *exp(-0.5*prec[2]*pow(y[i]-mu[2],2))+
+                mixing_p[3]*pow(prec[3],0.5)*0.399
+                *exp(-0.5*prec[3]*pow(y[i]-mu[3],2))
+
+
+   # inference for z(prob(belongs to component 1|data&parameters))
+   z1[i] = (mixing_p[1]*pow(prec[1],0.5)*0.399
+          *exp(-0.5*prec[1]*pow(y[i]-mu[1],2)))/
+           (mixing_p[1]*pow(prec[1],0.5)*0.399
+          *exp(-0.5*prec[1]*pow(y[i]-mu[1],2))+
+                (mixing_p[2]*pow(prec[2],0.5)*0.399
+                *exp(-0.5*prec[2]*pow(y[i]-mu[2],2)))+
+           (mixing_p[3]*pow(prec[3],0.5)*0.399
+                *exp(-0.5*prec[3]*pow(y[i]-mu[3],2))))
+
+   # prob(belongs to component 2|data&parameters)
+   z2[i] = (mixing_p[2]*pow(prec[2],0.5)*0.399
+          *exp(-0.5*prec[2]*pow(y[i]-mu[2],2)))/
+           (mixing_p[1]*pow(prec[1],0.5)*0.399
+          *exp(-0.5*prec[1]*pow(y[i]-mu[1],2))+
+                (mixing_p[2]*pow(prec[2],0.5)*0.399
+                *exp(-0.5*prec[2]*pow(y[i]-mu[2],2)))+
+           (mixing_p[3]*pow(prec[3],0.5)*0.399
+                *exp(-0.5*prec[3]*pow(y[i]-mu[3],2))))
+
+   z[i]=3-2*z1[i]-z2[i]
+    
+  }
+  
+  # prior 
+  
+  # vague normal prior (centered at zero with small precision)
+  # here WLOG we assume mu[3]>mu[2]>mu[1] to give some identifiability
+  mu[1] ~ dnorm(0, 1/49)
+  mu[2] ~ dnorm(0, 1/49)T(mu[1],)
+  mu[3] ~ dnorm(0, 1/49)T(mu[2],)
+  
+  sigma[1] ~ dlnorm(0, 1)T(0,)
+  sigma[2] ~ dlnorm(0, 1)T(0,)
+  sigma[3] ~ dlnorm(0, 1)T(0,)
+
+  prec[1] <- pow(sigma[1],-2)
+  prec[2] <- pow(sigma[2],-2)
+  prec[3] <- pow(sigma[3],-2)
+
+  mixing_p ~ ddirich(c(1.0,1.0,1.0))
+   
+}
