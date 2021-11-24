@@ -8,7 +8,7 @@ options(mc.cores = parallel::detectCores())
 rstan_options(auto_write = TRUE)
 load(file = here("data","anesthesia.rda"))
 NT <- 2 # number of trials
-set.seed(123)
+set.seed(1)
 
 
 #rater(anesthesia, dawid_skene())
@@ -40,16 +40,12 @@ parameters = c("pi", "theta","z")
 # * time
 # * Rhat
 
-# the quantities will be stored in separate dataframes
-# with the following rows and columns
-#             trial number
-# stan
-# jags-full
-# jags-marg
-time_df <- data.frame(row.names = c("stan", "jags-full", "jags-marg"))
-timeperess_df <- data.frame(row.names = c("stan", "jags-full", "jags-marg"))
-ess_df <- data.frame(row.names = c("stan", "jags-full", "jags-marg"))
-rhat_df <- data.frame(row.names = c("stan", "jags-full", "jags-marg"))
+# the quantities will be stored in a dataframe with the following columns
+# * model
+# * quantity
+# * trial 
+# * value
+result <- data.frame()
 
 # apart from the quantities of interest, create lists 
 # for model objects
@@ -57,72 +53,84 @@ stan_mod_list <- list()
 jags_full_mod_list <- list()
 jags_marg_mod_list <- list()
 
+
 for(t in 1:NT){
   # stan
   # record stan computation time
-  time_df["stan",t] <- system.time(model.rater <- rater(anesthesia, dawid_skene()))["elapsed"]
+  time <- system.time(model.rater <- rater(anesthesia, dawid_skene()))["elapsed"]
+  result <- rbind(result, c("stan", "Computation Time", t, time))
   
   # record stan model
   model_fit <- get_stanfit(model.rater)
   stan_mod_list[[t]] <- model_fit
   
   # record stan min ess(84 is the number of continuous pars)
-  ess_df["stan",t] <- min(summary(model_fit)$summary[,"n_eff"][0:84])
+  ess <- min(summary(model_fit)$summary[,"n_eff"][0:84])
+  result <- rbind(result, c("stan", "Min Effective Sample Size", t, ess))
   
   # record stan timeper min ess
-  timeperess_df["stan",t] <-  time_df["stan",t]/ess_df["stan",t]
+  timeperess <-  time/ess
+  result <- rbind(result, c("stan", "Time per min Effective Sample", t, timeperess))
   
   # record stan rhat
-  rhat_df["stan",t] <- max(mcmc_diagnostics(model.rater)[,"Rhat"])
+  rhat <- max(mcmc_diagnostics(model.rater)[,"Rhat"])
+  result <- rbind(result, c("stan", "Rhat", t, rhat))
   
   # jags-full
   # record jags-full computation time
-  time_df["jags-full",t] <- 
+  time <- 
     system.time(model.fit <- jags.model(file =here("Models","Dawid-Skene.txt"), 
                                         data=data_jags, n.chains=chains))["elapsed"] 
   + system.time(model.samples <- coda.samples(model.fit, parameters, 
                                               n.iter=iterations))["elapsed"] 
+  result <- rbind(result, c("jags-full", "Computation Time", t, time))
+  
   # record jags-full model
   jags_full_mod_list[[t]] <- model.samples
   
   # record jags-full min ess
-  ess_df["jags-full",t] <- min(effectiveSize(model.samples)[0:84])
+  ess <- min(effectiveSize(model.samples)[0:84])
+  result <- rbind(result, c("jags-full", "Min Effective Sample Size", t, ess))
   
   # record jags-full timeper min ess
-  timeperess_df["jags-full",t] <- time_df["jags-full",t]/ess_df["jags-full",t]
+  timeperess <-  time/ess
+  result <- rbind(result, c("jags-full", "Time per min Effective Sample", t, timeperess))
   
   # record jags-full rhat
   disc <- gelman.diag(model.samples, multivariate = FALSE)
-  rhat_df["jags-full",t] <- max(disc$psrf[1:84,"Upper C.I."])
-  
+  rhat <- max(disc$psrf[1:84,"Upper C.I."])
+  result <- rbind(result, c("jags-full", "Rhat", t, rhat))
   
   # jags-marg
   # record jags-marg computation time
-  time_df["jags-marg",t] <- 
+  time <- 
     system.time(model.fit <- jags.model(file =here("Models","Dawid-Skene-marginalised.txt"), 
                                         data=data_jags, n.chains=chains))["elapsed"] 
   + system.time(model.samples <- coda.samples(model.fit, parameters, 
                                               n.iter=iterations))["elapsed"] 
+  result <- rbind(result, c("jags-marg", "Computation Time", t, time))
+  
   # record jags-marg model
   jags_marg_mod_list[[t]] <- model.samples
   
   # record jags-marg min ess
-  ess_df["jags-marg",t] <- min(effectiveSize(model.samples)[0:84])
+  ess <- min(effectiveSize(model.samples)[0:84])
+  result <- rbind(result, c("jags-marg", "Min Effective Sample Size", t, ess))
   
   # record jags-marg timeper min ess
-  timeperess_df["jags-marg",t] <- time_df["jags-marg",t]/ess_df["jags-marg",t]
+  timeperess <-  time/ess
+  result <- rbind(result, c("jags-marg", "Time per min Effective Sample", t, timeperess))
   
   # record jags-marg rhat
   disc <- gelman.diag(model.samples, multivariate = FALSE)
-  rhat_df["jags-marg",t] <- max(disc$psrf[1:84,"Upper C.I."])
-  
+  rhat <- max(disc$psrf[1:84,"Upper C.I."])
+  result <- rbind(result, c("jags-marg", "Rhat", t, rhat))
 }
 
+colnames(result) <- c("model", "quantity", "trial", "value")
 # save results
-saveRDS(time_df, file = paste(here("Results"), "Dawid-Skene-time.rds"))
-saveRDS(rhat_df, file = paste(here("Results"), "Dawid-Skene-rhat.rds"))
-saveRDS(timeperess_df, file = paste(here("Results"), "Dawid-Skene-timeperess.rds"))
-saveRDS(ess_df, file = paste(here("Results"), "Dawid-Skene-ess.rds"))
+saveRDS(result, file = paste(here("Results"), "/Dawid-Skene-result.rds", sep=""))
+
 
     
         
