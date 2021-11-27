@@ -1,0 +1,120 @@
+---
+title: "two-component-mixture-result"
+author: "Kate Zhang"
+date: "25/11/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+library(egg)
+library(dplyr)
+library(tidyverse)
+library(scales)
+# helper function for string wrapping
+swr <- function(string, nwrap=20) {
+  paste(strwrap(string, width=nwrap), collapse="\n")
+}
+swr <- Vectorize(swr)
+addline_format <- function(x,...){
+    gsub('-','\n',x)
+}
+```
+Parameters for data
+```{r}
+sample.pts <- seq(-20,20, by=0.1)
+mixing_p1 <- c(0.50, 0.50)
+mu1 = c(5, -5)
+prec1 = c(1/4, 1/4)
+sigma1 = sqrt(1/prec1)
+
+mixing_p2 <- c(0.50, 0.50)
+mu2 = c(2.5, -2.5)
+prec2 = c(1/4, 1/4)
+sigma2 = sqrt(1/prec2)
+
+
+mixing_p3 <- c(0.70, 0.30)
+mu3 = c(5, -5)
+prec3 = c(1/4, 1/4)
+sigma3 = sqrt(1/prec3)
+
+
+mixing_p4 <- c(0.70, 0.30)
+mu4 = c(2.5, -2.5)
+prec4 = c(1/4, 1/4)
+sigma4 = sqrt(1/prec4)
+```
+
+Plots for densities:
+
+```{r}
+dens_f <- function(x){
+  val <- eval(as.name(paste("mixing_p", x, sep="")))[1]*
+          dnorm(sample.pts,  
+                mean=eval(as.name(paste("mu", x, sep="")))[1], 
+                sd = eval(as.name(paste("sigma", datanum, sep="")))[1]) + 
+         eval(as.name(paste("mixing_p", x, sep="")))[2]*
+          dnorm(sample.pts, 
+                mean=eval(as.name(paste("mu", x, sep="")))[2], 
+                sd = eval(as.name(paste("sigma", datanum, sep="")))[2])
+  return(val)
+}
+
+dens <- c(1,3,2,4)
+dens_list <- lapply(dens, dens_f)
+dens_df <- data.frame()
+for(i in 1:4){
+  dens_df <- rbind(dens_df, data.frame("density" = dens_list[[i]], "data"=rep(paste("Data", i), length(sample.pts)), "x"=sample.pts))
+}
+dens_df$data <- factor(dens_df$data, levels = c("Data 1", "Data 2", "Data 3", "Data 4"))
+dens_df$quantity <- factor("density")
+```
+
+Organising result into plots 
+```{r,fig.width=8.5, fig.height=2}
+dens_plots <- ggplot(dens_df, aes(x=x,y = density)) + geom_line() + xlim(c(-20, 20)) + facet_grid(quantity~data, scales='free_y', labeller = label_wrap_gen(multi_line=FALSE)) + theme_bw()  + theme(text = element_text(size=20))
+dens_plots <- dens_plots #+  theme(strip.text.x = element_blank())
+dens_plots
+```
+
+```{r}
+result <- readRDS(here("Results","two-component-result.rds"))
+result$model <- factor(result$model, levels = c("stan", "jags-full","jags-marg-inbuilt", "jags-marg", "jags-full-restricted"))
+result$data <- factor(result$data, levels = c("1","3","2","4"))
+result$quantity <- (result$quantity)
+result$quantity <- factor(result$quantity, levels = c(("Time per min Effective Sample"), "Computation Time",( "Min Effective Sample Size"), "Rhat"))
+result$trial <- factor(result$trial)
+result$value <- as.numeric(result$value)
+result
+```
+Log-scale plots with the same y-axis
+```{r, fig.width=8.5, fig.height=5.5}
+log_plot1 <- ggplot(subset(result, quantity != "Rhat"), aes(x=model, y=value, group=model)) +  geom_boxplot() + facet_grid(quantity~data, scales='free') + theme(strip.placement = "outside") + theme_bw() + theme(text = element_text(size=20)) + scale_x_discrete(labels=addline_format(c("stan", "jags-full","jags-marg-inbuilt", "jags-marg", "jags-full-restricted"))) 
+log_plot1 <- log_plot1 +  theme(strip.text.x = element_blank()) + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))
+log_plot1 <- log_plot1 +scale_x_discrete(labels = NULL) + theme(axis.title.x = element_blank())
+log_plot1
+```
+```{r,fig.width=8.5, fig.height=2}
+log_plot2 <- ggplot(subset(result, quantity == "Rhat"), aes(x=model, y=value, group=model)) +  geom_point()+ facet_grid(quantity~data, scales='free_y', labeller = label_wrap_gen(multi_line=FALSE)) + theme(strip.placement = "outside") + theme_bw() + theme(text = element_text(size=20)) + scale_x_discrete(labels=addline_format(c("stan", "jags-full","jags-marg-inbuilt", "jags-marg", "jags-full-restricted"))) +geom_hline(yintercept = 1.1)
+log_plot2 <- log_plot2 +  theme(strip.text.x = element_blank()) + scale_y_continuous(
+  labels = scales::number_format(accuracy = 0.001))
+log_plot2
+```
+```{r,fig.width=8.5, fig.height=10}
+grid.arrange(dens_plots ,log_plot1, log_plot2, ncol=1 , layout_matrix = cbind(c(1,2,2,2,3)))
+```
+
+
+For plots on different scales, we need to make plots for different quantities separately
+```{r, fig.width=8.5, fig.height=2.5}
+plot1 <- ggplot(subset(result, quantity == "Computation Time"), aes(x=model, y=value)) +  geom_boxplot() + facet_grid(quantity ~data , scales='free') + theme_bw() + theme(text = element_text(size=20)) + scale_x_discrete(labels=addline_format(c("stan", "jags-full","jags-marg-inbuilt", "jags-marg", "jags-full-restricted")))
+plot1 +  theme(strip.text.x = element_blank())
+```
+```{r, fig.width=8.5, fig.height=5}
+plot2 <- ggplot(subset(result %>% mutate(quant_dat = paste0(quantity, '-', data)), quantity != "Rhat"), aes(x=model, y=value, group=model)) +  geom_boxplot() + facet_grid(quant_dat~., scales='free', labeller = label_wrap_gen(multi_line=FALSE)) + theme_bw() + theme(text = element_text(size=20)) + scale_x_discrete(labels=addline_format(c("stan", "jags-full","jags-marg-inbuilt", "jags-marg", "jags-full-restricted"))) + theme(strip.placement = "inside")
+plot2
+```
+
+```{r}
+plot2 <- ggplot(subset(result, quantity == "Rhat"), aes(x=model, y=value, group=model)) +  geom_point() + theme_bw() + facet_grid(quantity ~., scales='free') + theme(text = element_text(size=20))+geom_hline(yintercept = 1.1)#+ scale_color_brewer(palette="Set3") +geom_hline(yintercept = 1.1)
+```
