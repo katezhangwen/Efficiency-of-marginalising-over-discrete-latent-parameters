@@ -1,0 +1,143 @@
+---
+title: "three-component-mixture-result"
+author: "Kate Zhang"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+library(egg)
+library(dplyr)
+library(tidyverse)
+library(scales)
+addline_format <- function(x,...){
+    gsub('-','-\n',x)
+}
+```
+Parameters for data
+```{r}
+sample.pts <- seq(-20,20, by=0.1)
+mixing_equal <- c(1/3, 1/3, 1/3)
+mixing_diff <- c(0.5, 0.3, 0.2)
+mixing_pair <- c(0.5, 0.3, 0.2)
+prec = c(1/4, 1/4, 1/4)
+sigma = sqrt(1/prec)
+
+mu_equal_big <- c(-10.5, 0, 10.5)
+mu_equal_small <- c(-6, 0 , 6)
+
+mu_diff_big <- c(-9, -3, 12 )
+mu_diff_small <- c(-4.5, 0 , 6.5)
+
+
+mixing_p1 <- mixing_p2 <- mixing_p3 <- mixing_p4 <- mixing_equal
+
+mixing_p5 <- mixing_p6 <- mixing_p7 <- mixing_p8 <- mixing_diff
+
+mu1 <- mu5 <- mu_equal_big
+mu2 <- mu6 <- mu_equal_small
+mu3 <- mu7 <- mu_diff_big
+mu4 <- mu8 <- mu_diff_small
+
+
+```
+
+Plots for densities:
+
+```{r}
+dens_f <- function(x){
+  val <- eval(as.name(paste("mixing_p", x, sep="")))[1]*
+          dnorm(sample.pts,  
+                mean=eval(as.name(paste("mu", x, sep="")))[1], 
+                sd = sigma) + 
+         eval(as.name(paste("mixing_p", x, sep="")))[2]*
+          dnorm(sample.pts, 
+                mean=eval(as.name(paste("mu", x, sep="")))[2], 
+                sd = sigma) +
+        eval(as.name(paste("mixing_p", x, sep="")))[3]*
+              dnorm(sample.pts, 
+                    mean=eval(as.name(paste("mu", x, sep="")))[3], 
+                    sd = sigma)
+  return(val)
+}
+
+dens <- c(1,5,7,2,4,3,6,8)
+dens_list <- lapply(dens, dens_f)
+dens_df <- data.frame()
+for(i in 1:8){
+  dens_df <- rbind(dens_df, data.frame("density" = dens_list[[i]], "data"=rep(paste("Data", i), length(sample.pts)), "x"=sample.pts))
+}
+dens_df$data <- factor(dens_df$data, levels = c("Data 1", "Data 2", "Data 3", "Data 4","Data 5", "Data 6", "Data 7", "Data 8"))
+dens_df$quantity <- factor("Density")
+```
+
+Organising result into plots 
+```{r,fig.width=17, fig.height=2}
+dens_plots <- ggplot(dens_df, aes(x=x,y = density)) + geom_line() + xlim(c(-20, 20)) + facet_grid(quantity~data, scales='free_y', labeller = label_wrap_gen(multi_line=FALSE)) + theme_bw()  + theme(text = element_text(size=20))
+dens_plots <- dens_plots #+  theme(strip.text.x = element_blank())
+dens_plots
+```
+```{r}
+result <- readRDS(here("Results","three-component-result.rds"))
+result$model <- factor(result$model, levels = c("stan", "jags-full","jags-marg-inbuilt", "jags-marg", "jags-full-restricted"))
+result$data <- factor(result$data, levels = format(c(1,5,7,2,4,3,6,8)), labels = c("Data 1","Data 2","Data 3","Data 4","Data 5","Data 6","Data 7","Data 8"))
+result$quantity <- (result$quantity)
+result$quantity <- factor(result$quantity, levels = c(("Time per min Effective Sample"), "Computation Time",( "Min Effective Sample Size"), "Rhat"))
+result$trial <- factor(result$trial)
+result$value <- as.numeric(result$value)
+result
+```
+
+
+Log-scale plots with the same y-axis
+```{r, fig.width=17, fig.height=5.5}
+log_plot <- ggplot(subset(result, quantity != "Rhat"), aes(x=model, y=value, group=model)) +  geom_boxplot() + facet_grid(quantity~data, scales='free') + theme(strip.placement = "outside") + theme_bw() + theme(text = element_text(size=20)) + scale_x_discrete(labels=addline_format(c("stan", "jags-full","jags-marg-inbuilt", "jags-marg", "jags-full-restricted"))) 
+log_plot <- log_plot +  theme(strip.text.x = element_blank()) + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))
+log_plot <- log_plot +scale_x_discrete(labels = NULL) + theme(axis.title.x = element_blank())
+log_plot
+```
+
+```{r,fig.width=17, fig.height=2}
+rhat_plot <- ggplot(subset(result, quantity == "Rhat"), aes(x=model, y=value, group=model)) +  geom_point()+ facet_grid(quantity~data, scales='free_y', labeller = label_wrap_gen(multi_line=FALSE)) + theme(strip.placement = "outside") + theme_bw() + theme(text = element_text(size=20)) + scale_x_discrete(labels=addline_format(c("stan", "jags-full","jags-marg-inbuilt", "jags-marg", "jags-full-restricted"))) +geom_hline(yintercept = 1.1)
+rhat_plot <- rhat_plot +  theme(strip.text.x = element_blank()) + scale_y_continuous(
+  labels = scales::number_format(accuracy = 0.01))
+rhat_plot
+```
+
+```{r,fig.width=17, fig.height=10}
+pdf("three-component-mixture-log-result.pdf", width = 36, height = 20)
+grid.arrange(dens_plots ,log_plot, rhat_plot, ncol=1 , layout_matrix = cbind(c(1,2,2,2,3)))
+dev.off()
+```
+
+For plots on different scales, we need to make plots for different quantities separately
+```{r, fig.width=17, fig.height=5.5}
+plot <- ggplot(subset(result, quantity != "Rhat"), aes(x=model, y=value, group=model)) +  geom_boxplot() + facet_wrap(quantity~data, scales='free_y', ncol=8) + theme(strip.placement = "outside") + theme_bw() + theme(text = element_text(size=20)) + scale_x_discrete(labels=addline_format(c("stan", "jags-full","jags-marg-inbuilt", "jags-marg", "jags-full-restricted"))) 
+#plot <- plot +  theme(strip.text.x = element_blank()) 
+plot <- plot +scale_x_discrete(labels = NULL) + theme(axis.title.x = element_blank())
+plot
+```
+
+
+```{r,fig.width=17, fig.height=2}
+dens_plots2 <- ggplot(dens_df, aes(x=x,y = density)) + geom_line() + xlim(c(-20, 20)) + facet_wrap(quantity~data, scales='free',ncol=8) + theme_bw()  + theme(text = element_text(size=20)) 
+dens_plots2 <- dens_plots2 #+  theme(strip.text.x = element_blank())
+dens_plots2
+```
+
+
+```{r , fig.width=17, fig.height=2}
+rhat_plot2 <- ggplot(subset(result, quantity == "Rhat"), aes(x=model, y=value, group=model)) +  geom_point()+ facet_wrap(quantity~data, scales='free', ncol=8) + theme_bw() + theme(text = element_text(size=20)) + scale_x_discrete(labels=addline_format(c("stan", "jags-full","jags-marg-inbuilt", "jags-marg", "jags-full-restricted"))) + geom_hline(yintercept = 1.1)#+ label_value(labels, multi_line = TRUE)
+#rhat_plot2 <- rhat_plot2   +  theme(strip.text.y = element_blank() ,plot.margin = unit(c(ub, rl, ub, rl), "cm") )  
+rhat_plot2
+```
+
+
+```{r,fig.width=17, fig.height=10}
+pdf("three-component-mixture-result.pdf", width = 36, height = 20)
+grid.arrange(
+  dens_plots2+ scale_y_continuous(labels = scales::number_format(accuracy = 0.001), limits = c(0,0.11)),
+  plot,
+  rhat_plot2 + theme(panel.spacing = unit(1, "lines")),
+  ncol=1 , layout_matrix = cbind(c(1,2,2,2,3)))
+dev.off()
+```
