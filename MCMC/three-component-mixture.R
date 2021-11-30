@@ -49,27 +49,29 @@ res_sampler <- function(){
 }
 
 # parameters and functions for generating data
-mixing_p1 <- c(0.50, 0.50)
-mu1 = c(5, -5)
-prec1 = c(1/4, 1/4)
-sigma1 = sqrt(1/prec1)
+mixing_equal <- c(1/3, 1/3, 1/3)
+mixing_diff <- c(0.5, 0.3, 0.2)
+mixing_pair <- c(0.5, 0.3, 0.2)
+prec = c(1/4, 1/4, 1/4)
+sigma = sqrt(1/prec)
 
-mixing_p2 <- c(0.50, 0.50)
-mu2 = c(2.5, -2.5)
-prec2 = c(1/4, 1/4)
-sigma2 = sqrt(1/prec2)
+mu_equal_big <- c(-10.5, 0, 10.5)
+mu_equal_small <- c(-6, 0 , 6)
 
-
-mixing_p3 <- c(0.70, 0.30)
-mu3 = c(5, -5)
-prec3 = c(1/4, 1/4)
-sigma3 = sqrt(1/prec3)
+mu_diff_big <- c(-9, -3, 12 )
+mu_diff_small <- c(-4.5, 0 , 6.5)
 
 
-mixing_p4 <- c(0.70, 0.30)
-mu4 = c(2.5, -2.5)
-prec4 = c(1/4, 1/4)
-sigma4 = sqrt(1/prec4)
+mixing_p1 <- mixing_p2 <- mixing_p3 <- mixing_p4 <- mixing_equal
+
+mixing_p5 <- mixing_p6 <- mixing_p7 <- mixing_p8 <- mixing_diff
+
+mu1 <- mu5 <- mu_equal_big
+mu2 <- mu6 <- mu_equal_small
+mu3 <- mu7 <- mu_diff_big
+mu4 <- mu8 <- mu_diff_small
+
+
 
 N <- 200
 
@@ -83,7 +85,7 @@ data_generation <- function(datanum){
   for(i in 1:N){
     x[i] = rnorm(n=1, 
                  mean=eval(as.name(paste("mu", datanum, sep="")))[I[i]], 
-                 sd=eval(as.name(paste("sigma", datanum, sep="")))[I[i]])
+                 sd=sigma)
   }
   return(x)
 }
@@ -111,18 +113,43 @@ jags_mod_list <- list()
 jags_full_restricted_mod_list <- list()
 
 # start running jags and stan
-for (datanum in 1:4){
-
+for (datanum in 1:8){
+  
   for (t in 1:NT){
     data <- data_generation(datanum)
     y <- data
     N <- length(data)
     data_jags <- data_stan <- list(N=N, y=y)
     
+    # for stan
+    # record stan computation time
+    time <- system.time(model_fit <-
+                          suppressMessages(
+                            stan(file = here("Models","three-componentModellnorm.stan"),
+                                 data = data_stan, iter=iterations,
+                                 chain=chains, warmup=burnin)))["elapsed"]
+    result <- rbind(result, c("stan", NA, datanum, "Computation Time", t, time))
+    
+    # record stan model
+    stan_mod_list[[t]] <- model_fit
+    
+    # record stan min ess
+    ess <- min(summary(model_fit)$summary[,"n_eff"][0:9])
+    result <- rbind(result, c("stan",NA,  datanum, "Min Effective Sample Size", t, ess))
+    
+    # record stan timeper min ess
+    timeperess <-  time/ess
+    result <- rbind(result, c("stan", NA,datanum,  "Time per min Effective Sample", t, timeperess))
+    
+    # record stan rhat
+    temp <- summary(model_fit)
+    rhat <- max(temp$summary[,"Rhat"][1:9])
+    result <- rbind(result, c("stan",NA, datanum,  "Rhat", t, rhat))
+    
     # unrestricted set of samplers for jags
     all_sampler()
     for(j in 1:3){
-      model <- paste("two-componentModel",j,"lnorm.txt",sep="")
+      model <- paste("three-componentModel",j,"lnorm.txt",sep="")
       
       # for jags-full 
       # computation time
@@ -133,15 +160,15 @@ for (datanum in 1:4){
       t2 <- system.time(model.samples <- 
                       coda.samples(model.fit, parameters, 
                                    n.iter=iterations))["elapsed"]
-      
       time <- t1 + t2
+      
       result <- rbind(result, c("jags", j, datanum,"Computation Time", t, time))
       
       # model
       jags_mod_list[[t]] <- model.samples
       
       # ess
-      ess <- min(effectiveSize(model.samples)[0:6])
+      ess <- min(effectiveSize(model.samples)[0:9])
       result <- rbind(result, c("jags",j, datanum,"Min Effective Sample Size", t, ess))
       
       # time per ess
@@ -150,12 +177,12 @@ for (datanum in 1:4){
       
       #rhat
       disc <- gelman.diag(model.samples, multivariate = FALSE)
-      rhat <- max(disc$psrf[1:6,"Upper C.I."])
+      rhat <- max(disc$psrf[1:9,"Upper C.I."])
       result <- rbind(result, c("jags",j,datanum, "Rhat", t, rhat))
     }
     # restricted set of samplers for jags
     res_sampler()
-    model <- paste("two-componentModel1lnorm.txt")
+    model <- paste("three-componentModel1lnorm.txt")
     # computation time
     t1 <- system.time(model.fit <- 
                           jags.model(file =here("Models",model), 
@@ -165,14 +192,13 @@ for (datanum in 1:4){
                     coda.samples(model.fit, parameters, 
                                  n.iter=iterations))["elapsed"]
     time <- t1 + t2
-    
     result <- rbind(result, c("jags-full-restricted", NA,datanum, "Computation Time", t, time))
     
     # model
     jags_full_restricted_mod_list[[t]] <- model.samples
     
     # ess
-    ess <- min(effectiveSize(model.samples)[0:6])
+    ess <- min(effectiveSize(model.samples)[0:9])
     result <- rbind(result, c("jags-full-restricted",NA, datanum,"Min Effective Sample Size", t, ess))
     
     # time per ess
@@ -181,33 +207,8 @@ for (datanum in 1:4){
     
     #rhat
     disc <- gelman.diag(model.samples, multivariate = FALSE)
-    rhat <- max(disc$psrf[1:6,"Upper C.I."])
+    rhat <- max(disc$psrf[1:9,"Upper C.I."])
     result <- rbind(result, c("jags-full-restricted",NA, datanum,"Rhat", t, rhat))
-    
-    # for stan
-    # record stan computation time
-    time <- system.time(model_fit <-
-                          suppressMessages(
-                            stan(file = here("Models","two-componentModellnorm.stan"),
-                                 data = data_stan, iter=iterations,
-                                 chain=chains, warmup=burnin)))["elapsed"]
-    result <- rbind(result, c("stan", NA, datanum, "Computation Time", t, time))
-    
-    # record stan model
-    stan_mod_list[[t]] <- model_fit
-    
-    # record stan min ess
-    ess <- min(summary(model_fit)$summary[,"n_eff"][0:6])
-    result <- rbind(result, c("stan",NA,  datanum, "Min Effective Sample Size", t, ess))
-    
-    # record stan timeper min ess
-    timeperess <-  time/ess
-    result <- rbind(result, c("stan", NA,datanum,  "Time per min Effective Sample", t, timeperess))
-    
-    # record stan rhat
-    temp <- summary(model_fit)
-    rhat <- max(temp$summary[,"Rhat"][1:6])
-    result <- rbind(result, c("stan",NA, datanum,  "Rhat", t, rhat))
     
   }
 }
@@ -220,4 +221,4 @@ mod_name[result$model == "jags" & result$type == 3] <- "jags-marg"
 result$model <- mod_name
 result <- subset(result, select = -c(type))
 
-saveRDS(result, file = paste(here("Results"), "/two-component-result.rds", sep=""))
+saveRDS(result, file = paste(here("Results"), "/three-component-result.rds", sep=""))

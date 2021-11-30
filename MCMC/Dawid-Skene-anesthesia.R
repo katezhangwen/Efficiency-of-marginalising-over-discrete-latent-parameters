@@ -7,8 +7,8 @@ require(rstan)
 options(mc.cores = parallel::detectCores())
 rstan_options(auto_write = TRUE)
 load(file = here("data","anesthesia.rda"))
-NT <- 2 # number of trials
-set.seed(1)
+NT <- 5 # number of trials
+set.seed(123)
 
 
 #rater(anesthesia, dawid_skene())
@@ -78,11 +78,11 @@ for(t in 1:NT){
   
   # jags-full
   # record jags-full computation time
-  time <- 
-    system.time(model.fit <- jags.model(file =here("Models","Dawid-Skene.txt"), 
+  t1 <- system.time(model.fit <- jags.model(file =here("Models","Dawid-Skene.txt"), 
                                         data=data_jags, n.chains=chains))["elapsed"] 
-  + system.time(model.samples <- coda.samples(model.fit, parameters, 
-                                              n.iter=iterations))["elapsed"] 
+  t2 <-  system.time(model.samples <- coda.samples(model.fit, parameters, 
+                                              n.iter=iterations))["elapsed"]
+  time <- t1 + t2
   result <- rbind(result, c("jags-full", "Computation Time", t, time))
   
   # record jags-full model
@@ -103,11 +103,11 @@ for(t in 1:NT){
   
   # jags-marg
   # record jags-marg computation time
-  time <- 
-    system.time(model.fit <- jags.model(file =here("Models","Dawid-Skene-marginalised.txt"), 
+  t1 <- system.time(model.fit <- jags.model(file =here("Models","Dawid-Skene-marginalised.txt"), 
                                         data=data_jags, n.chains=chains))["elapsed"] 
-  + system.time(model.samples <- coda.samples(model.fit, parameters, 
+  t2 <- system.time(model.samples <- coda.samples(model.fit, parameters, 
                                               n.iter=iterations))["elapsed"] 
+  time <- t1 + t2
   result <- rbind(result, c("jags-marg", "Computation Time", t, time))
   
   # record jags-marg model
