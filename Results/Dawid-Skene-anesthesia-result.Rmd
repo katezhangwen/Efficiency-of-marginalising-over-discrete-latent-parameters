@@ -7,6 +7,7 @@ output: pdf_document
 library(egg)
 library(dplyr)
 library(tidyverse)
+library(here)
 # helper function for string wrapping
 swr <- function(string, nwrap=20) {
   paste(strwrap(string, width=nwrap), collapse="\n")
@@ -27,7 +28,7 @@ result$value <- as.numeric(result$value)
 result
 ```
 ```{r}
-plot1 <- ggplot(subset(result, quantity != "Rhat"), aes(x=model, y=value, group=model)) +  geom_boxplot() + facet_grid(quantity ~., scales='free') + theme_bw() + theme(text = element_text(size=20))#+ scale_fill_brewer(palette = "Set3")
+plot1 <- ggplot(subset(result, quantity != "Rhat"), aes(x=model, y=value, group=model)) +  geom_boxplot() + facet_grid(quantity ~., scales='free') + theme_bw() + theme(text = element_text(size=20)) +scale_x_discrete(labels = NULL) + theme(axis.title.x = element_blank()) + geom_boxplot(color="black", fill="gray", alpha=0.5) #+ scale_fill_brewer(palette = "Set3") 
 ```
 
 ```{r}
