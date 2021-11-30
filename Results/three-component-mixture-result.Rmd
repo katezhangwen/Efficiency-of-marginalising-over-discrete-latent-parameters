@@ -92,7 +92,7 @@ Log-scale plots with the same y-axis
 ```{r, fig.width=17, fig.height=5.5}
 log_plot <- ggplot(subset(result, quantity != "Rhat"), aes(x=model, y=value, group=model)) +  geom_boxplot() + facet_grid(quantity~data, scales='free') + theme(strip.placement = "outside") + theme_bw() + theme(text = element_text(size=20)) + scale_x_discrete(labels=addline_format(c("stan", "jags-full","jags-marg-inbuilt", "jags-marg", "jags-full-restricted"))) 
 log_plot <- log_plot +  theme(strip.text.x = element_blank()) + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))
-log_plot <- log_plot +scale_x_discrete(labels = NULL) + theme(axis.title.x = element_blank())
+log_plot <- log_plot +scale_x_discrete(labels = NULL) + theme(axis.title.x = element_blank()) + geom_boxplot(color="black", fill="gray", alpha=0.5)
 log_plot
 ```
 
@@ -113,7 +113,7 @@ For plots on different scales, we need to make plots for different quantities se
 ```{r, fig.width=17, fig.height=5.5}
 plot <- ggplot(subset(result, quantity != "Rhat"), aes(x=model, y=value, group=model)) +  geom_boxplot() + facet_wrap(quantity~data, scales='free_y', ncol=8) + theme(strip.placement = "outside") + theme_bw() + theme(text = element_text(size=20)) + scale_x_discrete(labels=addline_format(c("stan", "jags-full","jags-marg-inbuilt", "jags-marg", "jags-full-restricted"))) 
 #plot <- plot +  theme(strip.text.x = element_blank()) 
-plot <- plot +scale_x_discrete(labels = NULL) + theme(axis.title.x = element_blank())
+plot <- plot +scale_x_discrete(labels = NULL) + theme(axis.title.x = element_blank()) + geom_boxplot(color="black", fill="gray", alpha=0.5)
 plot
 ```
 
