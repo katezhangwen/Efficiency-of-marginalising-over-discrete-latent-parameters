@@ -1,7 +1,6 @@
 ---
 title: "two-component-mixture-result"
 author: "Kate Zhang"
-date: "25/11/2021"
 output: pdf_document
 ---
 
@@ -10,13 +9,8 @@ library(egg)
 library(dplyr)
 library(tidyverse)
 library(scales)
-# helper function for string wrapping
-swr <- function(string, nwrap=20) {
-  paste(strwrap(string, width=nwrap), collapse="\n")
-}
-swr <- Vectorize(swr)
 addline_format <- function(x,...){
-    gsub('-','\n',x)
+    gsub('-','-\n',x)
 }
 ```
 Parameters for data
@@ -52,11 +46,11 @@ dens_f <- function(x){
   val <- eval(as.name(paste("mixing_p", x, sep="")))[1]*
           dnorm(sample.pts,  
                 mean=eval(as.name(paste("mu", x, sep="")))[1], 
-                sd = eval(as.name(paste("sigma", datanum, sep="")))[1]) + 
+                sd = eval(as.name(paste("sigma", x, sep="")))[1]) + 
          eval(as.name(paste("mixing_p", x, sep="")))[2]*
           dnorm(sample.pts, 
                 mean=eval(as.name(paste("mu", x, sep="")))[2], 
-                sd = eval(as.name(paste("sigma", datanum, sep="")))[2])
+                sd = eval(as.name(paste("sigma", x, sep="")))[2])
   return(val)
 }
 
@@ -91,12 +85,12 @@ Log-scale plots with the same y-axis
 ```{r, fig.width=8.5, fig.height=5.5}
 log_plot <- ggplot(subset(result, quantity != "Rhat"), aes(x=model, y=value, group=model)) +  geom_boxplot() + facet_grid(quantity~data, scales='free') + theme(strip.placement = "outside") + theme_bw() + theme(text = element_text(size=20)) + scale_x_discrete(labels=addline_format(c("stan", "jags-full","jags-marg-inbuilt", "jags-marg", "jags-full-restricted"))) 
 log_plot <- log_plot +  theme(strip.text.x = element_blank()) + scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))
-log_plot <- log_plot +scale_x_discrete(labels = NULL) + theme(axis.title.x = element_blank())
+log_plot <- log_plot +scale_x_discrete(labels = NULL) + theme(axis.title.x = element_blank()) + geom_boxplot(color="black", fill="gray", alpha=0.5)
 log_plot
 ```
 ```{r,fig.width=8.5, fig.height=2}
 rhat_plot <- ggplot(subset(result, quantity == "Rhat"), aes(x=model, y=value, group=model)) +  geom_point()+ facet_grid(quantity~data, scales='free_y', labeller = label_wrap_gen(multi_line=FALSE)) + theme(strip.placement = "outside") + theme_bw() + theme(text = element_text(size=20)) + scale_x_discrete(labels=addline_format(c("stan", "jags-full","jags-marg-inbuilt", "jags-marg", "jags-full-restricted"))) +geom_hline(yintercept = 1.1)
-rhat_plot <- log_plot2 +  theme(strip.text.x = element_blank()) + scale_y_continuous(
+rhat_plot <- rhat_plot +  theme(strip.text.x = element_blank()) + scale_y_continuous(
   labels = scales::number_format(accuracy = 0.001))
 rhat_plot
 ```
@@ -111,7 +105,7 @@ For plots on different scales, we need to make plots for different quantities se
 ```{r, fig.width=8.5, fig.height=5.5}
 plot <- ggplot(subset(result, quantity != "Rhat"), aes(x=model, y=value, group=model)) +  geom_boxplot() + facet_wrap(quantity~data, scales='free_y') + theme(strip.placement = "outside") + theme_bw() + theme(text = element_text(size=20)) + scale_x_discrete(labels=addline_format(c("stan", "jags-full","jags-marg-inbuilt", "jags-marg", "jags-full-restricted"))) 
 #plot <- plot +  theme(strip.text.x = element_blank()) 
-plot <- plot +scale_x_discrete(labels = NULL) + theme(axis.title.x = element_blank())
+plot <- plot +scale_x_discrete(labels = NULL) + theme(axis.title.x = element_blank()) + geom_boxplot(color="black", fill="gray", alpha=0.5)
 plot
 ```
 
