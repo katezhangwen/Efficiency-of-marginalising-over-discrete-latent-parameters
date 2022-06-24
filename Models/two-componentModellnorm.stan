@@ -13,13 +13,13 @@ parameters {
 
 
 model {
-  vector[2] log_component;
+  vector[2] log_mixing_p = log(mixing_p);  // cache logs
   mu ~ normal(0, 10);
   sigma ~ lognormal(0, 1);
-  mixing_p ~ dirichlet(rep_vector(1,2));
-  for (n in 1:N){
+  for (n in 1:N) {
+    vector[2] log_component = log_mixing_p;
     for (k in 1:2)
-      log_component[k] = log(mixing_p[k]) + normal_lpdf(y[n] | mu[k], sigma[k]);
+      log_component[k] += normal_lpdf(y[n] | mu[k], sigma[k]);
     target += log_sum_exp(log_component);
   }
 }
@@ -33,5 +33,5 @@ generated quantities{
       log_component[k] = log(mixing_p[k]) + normal_lpdf(y[n] | mu[k], sigma[k]);
     z[n] = -exp(log_component[1] - log_sum_exp(log_component))+2;
   }
-
+  
 }
