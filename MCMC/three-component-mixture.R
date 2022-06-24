@@ -3,6 +3,7 @@ require(rjags)
 require(coda)
 require(here)
 require(rstan)
+require(posterior)
 options(mc.cores = parallel::detectCores())
 rstan_options(auto_write = TRUE)
 load.module("mix")
@@ -132,9 +133,10 @@ for (datanum in 1:8){
     
     # record stan model
     stan_mod_list[[t]] <- model_fit
+    stan_summary <- summarise_draws(as_draws_array(model_fit))
     
     # record stan min ess
-    ess <- min(summary(model_fit)$summary[,"n_eff"][0:9])
+    ess <- min(stan_summary$ess_bulk[0:9])
     result <- rbind(result, c("stan",NA,  datanum, "Min Effective Sample Size", t, ess))
     
     # record stan timeper min ess
@@ -142,8 +144,7 @@ for (datanum in 1:8){
     result <- rbind(result, c("stan", NA,datanum,  "Time per min Effective Sample", t, timeperess))
     
     # record stan rhat
-    temp <- summary(model_fit)
-    rhat <- max(temp$summary[,"Rhat"][1:9])
+    rhat <- max(stan_summary$rhat[0:9])
     result <- rbind(result, c("stan",NA, datanum,  "Rhat", t, rhat))
     
     # unrestricted set of samplers for jags
@@ -166,9 +167,10 @@ for (datanum in 1:8){
       
       # model
       jags_mod_list[[t]] <- model.samples
+      jags_summary <- summarise_draws(as_draws_array(model.samples))
       
       # ess
-      ess <- min(effectiveSize(model.samples)[0:9])
+      ess <- min(jags_summary$ess_bulk[0:9])
       result <- rbind(result, c("jags",j, datanum,"Min Effective Sample Size", t, ess))
       
       # time per ess
@@ -176,8 +178,7 @@ for (datanum in 1:8){
       result <- rbind(result, c("jags",j, datanum,"Time per min Effective Sample", t, timeperess))
       
       #rhat
-      disc <- gelman.diag(model.samples, multivariate = FALSE)
-      rhat <- max(disc$psrf[1:9,"Upper C.I."])
+      rhat <- max(jags_summary$rhat[0:9])
       result <- rbind(result, c("jags",j,datanum, "Rhat", t, rhat))
     }
     # restricted set of samplers for jags
@@ -196,9 +197,10 @@ for (datanum in 1:8){
     
     # model
     jags_full_restricted_mod_list[[t]] <- model.samples
+    jags_summary <- summarise_draws(as_draws_array(model.samples))
     
     # ess
-    ess <- min(effectiveSize(model.samples)[0:9])
+    ess <- min(jags_summary$ess_bulk[0:9])
     result <- rbind(result, c("jags-full-restricted",NA, datanum,"Min Effective Sample Size", t, ess))
     
     # time per ess
@@ -206,8 +208,7 @@ for (datanum in 1:8){
     result <- rbind(result, c("jags-full-restricted",NA, datanum,"Time per min Effective Sample", t, timeperess))
     
     #rhat
-    disc <- gelman.diag(model.samples, multivariate = FALSE)
-    rhat <- max(disc$psrf[1:9,"Upper C.I."])
+    rhat <- max(jags_summary$rhat[0:9])
     result <- rbind(result, c("jags-full-restricted",NA, datanum,"Rhat", t, rhat))
     
   }
@@ -221,4 +222,4 @@ mod_name[result$model == "jags" & result$type == 3] <- "jags-marg"
 result$model <- mod_name
 result <- subset(result, select = -c(type))
 
-saveRDS(result, file = paste(here("Results"), "/three-component-result.rds", sep=""))
+saveRDS(result, file = paste(here("Results"), "/three-component-result_new_ess_bulk.rds", sep=""))

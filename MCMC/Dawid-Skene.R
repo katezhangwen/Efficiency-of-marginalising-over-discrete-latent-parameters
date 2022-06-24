@@ -4,6 +4,7 @@ require(rjags)
 require(coda)
 require(here)
 require(rstan)
+require(posterior)
 options(mc.cores = parallel::detectCores())
 rstan_options(auto_write = TRUE)
 NT <- 5 # number of trials
@@ -165,15 +166,24 @@ for(t in 1:NT){
   
   # stan
   # record stan computation time
-  time <- system.time(model.rater <- rater(sim$data, "dawid_skene"))["elapsed"]
+  time <- system.time(model_fit <-
+                        suppressMessages(
+                          stan(file = here("Models","DawidSkene.stan"),
+                               data = data_stan, iter=iterations,
+                               chain=chains, warmup=burnin)))["elapsed"]
+  
+  #time <- system.time(model.rater <- rater(sim$data, "dawid_skene"))["elapsed"]
   result <- rbind(result, c("stan", "Computation Time", t, time))
   
   # record stan model
-  model_fit <- get_stanfit(model.rater)
   stan_mod_list[[t]] <- model_fit
+  stan_summary <- summarise_draws(as_draws_array(model_fit))
+  
+  #model_fit <- get_stanfit(model.rater)
+  #stan_mod_list[[t]] <- model_fit
   
   # record stan min ess(130 is the number of continuous pars)
-  ess <- min(rstan::summary(model_fit)$summary[,"n_eff"][0:130])
+  ess <- min(stan_summary$ess_bulk[0:130])
   result <- rbind(result, c("stan", "Min Effective Sample Size", t, ess))
   
   # record stan timeper min ess
@@ -181,7 +191,7 @@ for(t in 1:NT){
   result <- rbind(result, c("stan", "Time per min Effective Sample", t, timeperess))
   
   # record stan rhat
-  rhat <- max(mcmc_diagnostics(model.rater)[,"Rhat"])
+  rhat <- max(stan_summary$rhat[0:130])
   result <- rbind(result, c("stan", "Rhat", t, rhat))
   
   # unrestricted set of samplers for jags
@@ -198,9 +208,10 @@ for(t in 1:NT){
   
   # record jags-full model
   jags_full_mod_list[[t]] <- model.samples
+  jags_summary <- summarise_draws(as_draws_array(model.samples))
   
   # record jags-full min ess
-  ess <- min(effectiveSize(model.samples)[0:130])
+  ess <- min(jags_summary$ess_bulk[0:130])
   result <- rbind(result, c("jags-full", "Min Effective Sample Size", t, ess))
   
   # record jags-full timeper min ess
@@ -208,8 +219,7 @@ for(t in 1:NT){
   result <- rbind(result, c("jags-full", "Time per min Effective Sample", t, timeperess))
   
   # record jags-full rhat
-  disc <- gelman.diag(model.samples, multivariate = FALSE)
-  rhat <- max(disc$psrf[1:130,"Upper C.I."])
+  rhat <- max(jags_summary$rhat[0:130])
   result <- rbind(result, c("jags-full", "Rhat", t, rhat))
   
   # jags-marg
@@ -223,9 +233,10 @@ for(t in 1:NT){
   
   # record jags-marg model
   jags_marg_mod_list[[t]] <- model.samples
+  jags_summary <- summarise_draws(as_draws_array(model.samples))
   
   # record jags-marg min ess
-  ess <- min(effectiveSize(model.samples)[0:130])
+  ess <- min(jags_summary$ess_bulk[0:130])
   result <- rbind(result, c("jags-marg", "Min Effective Sample Size", t, ess))
   
   # record jags-marg timeper min ess
@@ -233,8 +244,7 @@ for(t in 1:NT){
   result <- rbind(result, c("jags-marg", "Time per min Effective Sample", t, timeperess))
   
   # record jags-marg rhat
-  disc <- gelman.diag(model.samples, multivariate = FALSE)
-  rhat <- max(disc$psrf[1:130,"Upper C.I."])
+  rhat <- max(jags_summary$rhat[0:130])
   result <- rbind(result, c("jags-marg", "Rhat", t, rhat))
   
   # restructed set of samplers for jags
@@ -251,9 +261,10 @@ for(t in 1:NT){
   
   # record jags-full model
   jags_full_restricted_mod_list[[t]] <- model.samples
+  jags_summary <- summarise_draws(as_draws_array(model.samples))
   
   # record jags-full min ess
-  ess <- min(effectiveSize(model.samples)[0:130])
+  ess <- min(jags_summary$ess_bulk[0:130])
   result <- rbind(result, c("jags-full-restricted", "Min Effective Sample Size", t, ess))
   
   # record jags-full timeper min ess
@@ -261,14 +272,13 @@ for(t in 1:NT){
   result <- rbind(result, c("jags-full-restricted", "Time per min Effective Sample", t, timeperess))
   
   # record jags-full rhat
-  disc <- gelman.diag(model.samples, multivariate = FALSE)
-  rhat <- max(disc$psrf[1:130,"Upper C.I."])
+  rhat <- max(jags_summary$rhat[0:130])
   result <- rbind(result, c("jags-full-restricted", "Rhat", t, rhat))
 }
 
 colnames(result) <- c("model", "quantity", "trial", "value")
 # save results
-saveRDS(result, file = paste(here("Results"), "/Dawid-Skene-result.rds", sep=""))
+#saveRDS(result, file = paste(here("Results"), "/Dawid-Skene-result.rds", sep=""))
 
 
 
