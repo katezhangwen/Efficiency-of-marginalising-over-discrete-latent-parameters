@@ -17,7 +17,7 @@ data {
   int<lower=1, upper=J> jj[N];  // annotator for annotation n
   int<lower=0, upper=K> y[N];   // annotation for observation n
   vector<lower=0>[K] alpha;     // prior for pi
-  vector<lower=0>[K] beta[J, K];   // prior for theta
+  vector<lower=0>[K] beta[K];   // prior for theta
 }
 
 parameters {
@@ -26,16 +26,16 @@ parameters {
 }
 
 transformed parameters {
-  vector[K] log_p_z[I];
-  for (i in 1:I) {
-    log_p_z[i] = log(pi);
-  }
+  vector[I] log_lik;
+  vector[K] log_theta[J, K] = log(theta);  //  log only once
+  vector[K] log_p_z[I] = log(pi);
   for (n in 1:N) {
-    for (k in 1:K) {
-      // Here we marginalise over the latent discrete paramter
-      log_p_z[ii[n], k] = log_p_z[ii[n], k] + log(theta[jj[n], k, y[n]]);
-    }
+    log_p_z[ii[n], ] += log_theta[jj[n], , y[n]];  // vectorized
   }
+  for (i in 1:I) {
+    log_lik[i] = log_sum_exp(log_p_z[i]);
+  }
+    
 }
 
 model {
@@ -43,21 +43,8 @@ model {
   pi ~ dirichlet(alpha);
 
   for (k in 1:K) {
-    for (j in 1:J) {
-       //prior on theta
-       theta[j, k] ~ dirichlet(beta[j, k]);
-    }
+    theta[ , k] ~ dirichlet(beta[k]);
   }
-
-  for (i in 1:I) {
-    // log_sum_exp used for numerical stability
-    target += log_sum_exp(log_p_z[i]);
-  }
+  target += log_lik;
 }
 
-generated quantities {
-  vector[I] log_lik;
-  for (i in 1:I) {
-    log_lik[i] = log_sum_exp(log_p_z[i]);
-  }
-}
