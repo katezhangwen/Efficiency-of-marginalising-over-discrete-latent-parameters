@@ -77,7 +77,7 @@ dens_plots <- dens_plots #+  theme(strip.text.x = element_blank())
 dens_plots
 ```
 ```{r}
-result <- readRDS(here("Results","three-component-result.rds"))
+result <- readRDS(here("Results","three-component-result_new_ess_bulk.rds"))
 result$model <- factor(result$model, levels = c("stan", "jags-full","jags-marg-inbuilt", "jags-marg", "jags-full-restricted"))
 result$data <- factor(result$data, levels = format(c(1,5,7,2,4,3,6,8)), labels = c("Data 1","Data 2","Data 3","Data 4","Data 5","Data 6","Data 7","Data 8"))
 result$quantity <- (result$quantity)
@@ -104,7 +104,7 @@ rhat_plot
 ```
 
 ```{r,fig.width=17, fig.height=10}
-pdf("three-component-mixture-log-result.pdf", width = 36, height = 20)
+pdf("three-component-mixture-log-result-new-ess-bulk.pdf", width = 36, height = 20)
 grid.arrange(dens_plots ,log_plot, rhat_plot, ncol=1 , layout_matrix = cbind(c(1,2,2,2,3)))
 dev.off()
 ```
@@ -133,7 +133,7 @@ rhat_plot2
 
 
 ```{r,fig.width=17, fig.height=10}
-pdf("three-component-mixture-result.pdf", width = 36, height = 20)
+pdf("three-component-mixture-result-new-ess-bulk.pdf", width = 36, height = 20)
 grid.arrange(
   dens_plots2+ scale_y_continuous(labels = scales::number_format(accuracy = 0.001), limits = c(0,0.11)),
   plot,
