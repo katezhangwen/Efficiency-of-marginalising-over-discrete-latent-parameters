@@ -17,7 +17,7 @@ data {
   int<lower=1, upper=J> jj[N];  // annotator for annotation n
   int<lower=0, upper=K> y[N];   // annotation for observation n
   vector<lower=0>[K] alpha;     // prior for pi
-  vector<lower=0>[K] beta[K];   // prior for theta
+  vector<lower=0>[K] beta[J,K];   // prior for theta
 }
 
 parameters {
@@ -27,23 +27,27 @@ parameters {
 
 transformed parameters {
   vector[I] log_lik;
-  vector[K] log_theta[J, K] = log(theta);  //  log only once
-  vector[K] log_p_z[I] = log(pi);
-  for (n in 1:N) {
-    log_p_z[ii[n], ] += log_theta[jj[n], , y[n]];  // vectorized
+  {  // this extra block makes log_theta and log_p_z local variables so they're not saved
+    vector[K] log_theta[J, K] = log(theta);  //  log only once
+    vector[K] log_p_z[I] = rep_array(log(pi), I);
+    for (n in 1:N) {
+      log_p_z[ii[n], ] += to_vector(log_theta[jj[n], , y[n]]);  // vectorized
+    }
+    for (i in 1:I) {
+      log_lik[i] = log_sum_exp(log_p_z[i]);
+    }
   }
-  for (i in 1:I) {
-    log_lik[i] = log_sum_exp(log_p_z[i]);
-  }
-    
 }
 
 model {
   // prior on pi
   pi ~ dirichlet(alpha);
 
-  for (k in 1:K) {
-    theta[ , k] ~ dirichlet(beta[k]);
+  for (j in 1:J) {
+    for (k in 1:K) {
+       //prior on theta
+       theta[j, k] ~ dirichlet(beta[j, k]);
+    }
   }
   target += log_lik;
 }
