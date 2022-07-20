@@ -1,0 +1,71 @@
+---
+title: "two-component-mixture-stan-check"
+author: "Kate Zhang"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# loading all dependencies
+require(rjags)
+require(coda)
+require(here)
+require(rstan)
+require(posterior)
+library("bayesplot")
+library("ggplot2")
+library("rstanarm")  
+library(gridExtra)
+
+#load data
+data <- readRDS("data-iter5.rds")
+
+# some setup
+options(mc.cores = parallel::detectCores())
+rstan_options(auto_write = TRUE)
+load.module("mix")
+NT <- 5 # number of trials
+set.seed(123)
+
+
+iterations <- 3000
+burnin <- floor(iterations/2)
+chains <- 3
+parameters = c("mu", "sigma", "mixing_p","z")
+
+y <- data
+N <- length(data)
+data_stan <- list(N=N, y=y)
+```
+## plot data
+```{r}
+hist(data)
+```
+
+## Run stan
+```{r}
+# record stan computation time
+time <- system.time(model_fit <-
+                      suppressMessages(
+                        stan(file = here("Models","two-componentModellnorm.stan"),
+                             data = data_stan, iter=iterations,
+                             chain=chains, warmup=burnin, seed = paste(3))))["elapsed"]
+
+stan_summary <- summarise_draws(as_draws_array(model_fit))
+
+```
+
+### traceplot
+```{r}
+print(mcmc_trace(model_fit, pars = c("mixing_p[1]", "mixing_p[2]", "mu[1]", "mu[2]", "sigma[1]", "sigma[2]")))
+```
+
+
+### summary
+```{r}
+grid.table(stan_summary[1:6,])
+```
+
