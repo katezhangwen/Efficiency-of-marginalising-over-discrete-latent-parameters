@@ -156,12 +156,38 @@ for(t in 1:NT){
   ii <- sim$data[,1] # item index for annotation n
   jj <- sim$data[,2] # annotator for annotation n
   y <- sim$data[,3] # annotation for observation n
+  alpha <- rep(3,K)
+  beta <- matrix(ncol = K, nrow = K)
+  p <- 0.6
+  for (i in 1:K){
+    for (j in 1:K){
+      if(i ==j){
+        beta[i,j] <- N*p
+      }
+      else {
+        beta[i,j] <- N*(1-p)/(K-1)
+      }
+    }
+  }
   
-  data_jags <- data_stan <- list(N=N, y=y, K=K, I=I, J=J, ii=ii, jj=jj)
+  beta_slice <- beta
+  beta <- array(dim = c(J, K, K))
+  for (j in 1:J) {
+    beta[j, , ] <- beta_slice
+  }
+  
+  data_jags <-list(N=N, y=y, K=K, I=I, J=J, ii=ii, jj=jj)
+  data_stan <- list(N=N, y=y, K=K, I=I, J=J, ii=ii, jj=jj, beta=beta, alpha=alpha)
   iterations <- 6000
   burnin <- floor(iterations/2)
   chains <- 3
   parameters = c("pi", "theta","z")
+  
+  pi_init <- rep(1/K, K)
+  theta_init <- array(0.2 / (K - 1), c(J, K, K))
+  for (j in 1:J) {
+    diag(theta_init[j, ,]) <- 0.8
+  }
   
   
   # stan
@@ -170,6 +196,7 @@ for(t in 1:NT){
                         suppressMessages(
                           stan(file = here("Models","DawidSkene.stan"),
                                data = data_stan, iter=iterations,
+                               init = function(n) list(theta = theta_init, pi = pi_init),
                                chain=chains, warmup=burnin)))["elapsed"]
   
   #time <- system.time(model.rater <- rater(sim$data, "dawid_skene"))["elapsed"]
@@ -278,7 +305,7 @@ for(t in 1:NT){
 
 colnames(result) <- c("model", "quantity", "trial", "value")
 # save results
-#saveRDS(result, file = paste(here("Results"), "/Dawid-Skene-result.rds", sep=""))
+saveRDS(result, file = paste(here("Results"), "/Dawid-Skene-result-new-ess-bulk.rds", sep=""))
 
 
 

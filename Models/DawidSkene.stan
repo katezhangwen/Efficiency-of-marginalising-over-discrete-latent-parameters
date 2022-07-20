@@ -42,13 +42,13 @@ transformed parameters {
 model {
   // prior on pi
   pi ~ dirichlet(alpha);
-
+  
   for (j in 1:J) {
     for (k in 1:K) {
        //prior on theta
        theta[j, k] ~ dirichlet(beta[j, k]);
     }
   }
+  
   target += log_lik;
 }
-
