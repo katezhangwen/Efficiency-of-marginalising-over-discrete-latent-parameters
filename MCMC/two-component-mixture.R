@@ -4,6 +4,11 @@ require(coda)
 require(here)
 require(rstan)
 require(posterior)
+library("bayesplot")
+library("ggplot2")
+library("rstanarm")  
+library(gridExtra)
+
 options(mc.cores = parallel::detectCores())
 rstan_options(auto_write = TRUE)
 load.module("mix")
@@ -111,14 +116,26 @@ stan_mod_list <- list()
 jags_mod_list <- list()
 jags_full_restricted_mod_list <- list()
 
+# setting seeds
+stan_seeds <- c(8, 9, 7, 13, 14, 15)
+data_seeds <- c(1, 2, 6, 4, 5)
+  
 # start running jags and stan
 for (datanum in 1:4){
 
-  for (t in 1:NT){
+  for (t in 1:5){
+    set.seed(t)
     data <- data_generation(datanum)
     y <- data
     N <- length(data)
     data_jags <- data_stan <- list(N=N, y=y)
+    
+    # # save data
+    # pdf(paste("data-iter",t,sep = ""), width = 12, height = 6)
+    # hist(data, main = (paste("data-iter",t)))
+    # dev.off()
+    # 
+    # saveRDS(data, paste("data-iter",t,".rds",sep = ""))
     
     # unrestricted set of samplers for jags
     all_sampler()
@@ -127,6 +144,7 @@ for (datanum in 1:4){
       
       # for jags-full 
       # computation time
+      set.seed(paste(j))
       t1 <- system.time(model.fit <- 
                             jags.model(file =here("Models",model), 
                                        data=data_jags, 
@@ -153,11 +171,22 @@ for (datanum in 1:4){
       #rhat
       rhat <- max(jags_summary$rhat[0:6])
       result <- rbind(result, c("jags",j,datanum, "Rhat", t, rhat))
+      
+      # # save traceplot
+      # pdf(paste("jags-mod",j,"-iter",t,".pdf",sep = ""), width = 12, height = 6)
+      # print(mcmc_trace(model.samples, pars = c("mixing_p[1]", "mixing_p[2]", "mu[1]", "mu[2]", "sigma[1]", "sigma[2]")))
+      # dev.off()
+      # 
+      # # save summary
+      # pdf(paste("sum-jags-mod",j,"-iter",t,".pdf",sep = ""), width = 12, height = 6)
+      # grid.table(jags_summary[1:6,])
+      # dev.off()
     }
     # restricted set of samplers for jags
     res_sampler()
     model <- paste("two-componentModel1lnorm.txt")
     # computation time
+    set.seed(paste(j+5))
     t1 <- system.time(model.fit <- 
                           jags.model(file =here("Models",model), 
                                      data=data_jags, 
@@ -185,13 +214,23 @@ for (datanum in 1:4){
     rhat <- max(jags_summary$rhat[0:6])
     result <- rbind(result, c("jags-full-restricted",NA, datanum,"Rhat", t, rhat))
     
+    # # save traceplot
+    # pdf(paste("jags-mod1-res","-iter",t,".pdf",sep = ""), width = 12, height = 6)
+    # print(mcmc_trace(model.samples, pars = c("mixing_p[1]", "mixing_p[2]", "mu[1]", "mu[2]", "sigma[1]", "sigma[2]")))
+    # dev.off()
+    # 
+    # # save summary
+    # pdf(paste("sum-jags-mod1-res","-iter",t,".pdf",sep = ""), width = 12, height = 6)
+    # grid.table(jags_summary[1:6,])
+    # dev.off()
+    
     # for stan
     # record stan computation time
     time <- system.time(model_fit <-
                           suppressMessages(
                             stan(file = here("Models","two-componentModellnorm.stan"),
                                  data = data_stan, iter=iterations,
-                                 chain=chains, warmup=burnin)))["elapsed"]
+                                 chain=chains, warmup=burnin, seed= stan_seeds[t])))["elapsed"]
     result <- rbind(result, c("stan", NA, datanum, "Computation Time", t, time))
     
     # record stan model
@@ -210,6 +249,15 @@ for (datanum in 1:4){
     rhat <- max(stan_summary$rhat[0:6])
     result <- rbind(result, c("stan",NA, datanum,  "Rhat", t, rhat))
     
+    # save traceplot
+    # pdf(paste("stan","-iter",t,".pdf" ,sep = ""), width = 12, height = 6)
+    # print(mcmc_trace(model_fit, pars = c("mixing_p[1]", "mixing_p[2]", "mu[1]", "mu[2]", "sigma[1]", "sigma[2]")))
+    # dev.off()
+    
+    # save summary
+    # pdf(paste("sum-stan","-iter",t,".pdf",sep = ""), width = 12, height = 6)
+    # grid.table(stan_summary[1:6,])
+    # dev.off()
   }
 }
 # cleaning up model name
@@ -221,4 +269,4 @@ mod_name[result$model == "jags" & result$type == 3] <- "jags-marg"
 result$model <- mod_name
 result <- subset(result, select = -c(type))
 
-saveRDS(result, file = paste(here("Results"), "/two-component-result_new_ess_bulk.rds", sep=""))
+saveRDS(result, file = paste(here("Results"), "/two-component-result-new.rds", sep=""))
