@@ -152,7 +152,7 @@ for(t in 1:NT){
   
   
   # setup for models
-
+  Nn <- 8
   ii <- sim$data[,1] # item index for annotation n
   jj <- sim$data[,2] # annotator for annotation n
   y <- sim$data[,3] # annotation for observation n
@@ -162,10 +162,10 @@ for(t in 1:NT){
   for (i in 1:K){
     for (j in 1:K){
       if(i ==j){
-        beta[i,j] <- N*p
+        beta[i,j] <- Nn*p
       }
       else {
-        beta[i,j] <- N*(1-p)/(K-1)
+        beta[i,j] <- Nn*(1-p)/(K-1)
       }
     }
   }
@@ -178,9 +178,11 @@ for(t in 1:NT){
   
   data_jags <-list(N=N, y=y, K=K, I=I, J=J, ii=ii, jj=jj)
   data_stan <- list(N=N, y=y, K=K, I=I, J=J, ii=ii, jj=jj, beta=beta, alpha=alpha)
-  iterations <- 6000
+  #iterations <- 6000
+  iterations <- 3000
   burnin <- floor(iterations/2)
-  chains <- 3
+  #chains <- 3
+  chains <- 4
   parameters = c("pi", "theta","z")
   
   pi_init <- rep(1/K, K)
@@ -189,6 +191,7 @@ for(t in 1:NT){
     diag(theta_init[j, ,]) <- 0.8
   }
   
+
   
   # stan
   # record stan computation time
@@ -198,6 +201,21 @@ for(t in 1:NT){
                                data = data_stan, iter=iterations,
                                init = function(n) list(theta = theta_init, pi = pi_init),
                                chain=chains, warmup=burnin)))["elapsed"]
+
+  # using sampling
+  # temp <- stan_model(file =  here("Models","DawidSkene.stan"))
+  # 
+  # time <- system.time(model_fit <-
+  #                       suppressMessages(
+  #                         sampling(temp,
+  #                                  data = data_stan, iter=iterations,
+  #                                  init = function(n) list(theta = theta_init, pi = pi_init),
+  #                                  chain=chains, warmup=burnin)))["elapsed"]
+  
+  #time <- system.time(model.rater <- rater(sim$data, "dawid_skene"))["elapsed"]
+  
+  # record stan model
+  #model_fit <- get_stanfit(model.rater)
   
   #time <- system.time(model.rater <- rater(sim$data, "dawid_skene"))["elapsed"]
   result <- rbind(result, c("stan", "Computation Time", t, time))
@@ -206,8 +224,6 @@ for(t in 1:NT){
   stan_mod_list[[t]] <- model_fit
   stan_summary <- summarise_draws(as_draws_array(model_fit))
   
-  #model_fit <- get_stanfit(model.rater)
-  #stan_mod_list[[t]] <- model_fit
   
   # record stan min ess(130 is the number of continuous pars)
   ess <- min(stan_summary$ess_bulk[0:130])
@@ -251,6 +267,7 @@ for(t in 1:NT){
   
   # jags-marg
   # record jags-marg computation time
+  set.seed(t)
   t1 <- system.time(model.fit <- jags.model(file =here("Models","Dawid-Skene-marginalised.txt"), 
                                             data=data_jags, n.chains=chains))["elapsed"] 
   t2 <- system.time(model.samples <- coda.samples(model.fit, parameters, 
@@ -305,7 +322,7 @@ for(t in 1:NT){
 
 colnames(result) <- c("model", "quantity", "trial", "value")
 # save results
-saveRDS(result, file = paste(here("Results"), "/Dawid-Skene-result-new-ess-bulk.rds", sep=""))
+saveRDS(result, file = paste(here("Results"), "/Dawid-Skene-result-result_ess_bulk.rds", sep=""))
 
 
 
