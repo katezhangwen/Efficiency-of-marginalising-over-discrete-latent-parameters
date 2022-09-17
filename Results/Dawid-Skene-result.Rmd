@@ -21,7 +21,7 @@ addline_format <- function(x,...){
 
 Organising result into plots 
 ```{r}
-result <- readRDS(here("Results","Dawid-Skene-result.rds"))
+result <- readRDS(here("Results","Dawid-Skene-result_ess_bulk.rds"))
 
 result$model <- factor(result$model, levels = c("stan", "jags-full", "jags-marg", "jags-full-restricted"))
 
@@ -40,8 +40,8 @@ plot2 <- ggplot(subset(result, quantity == "Rhat"), aes(x=model, y=value, group=
 ```
 
 ```{r, fig.height=10, fig.width=5}
-pdf("Dawid-Skene-result.pdf", width = 8, height = 12)
+pdf("Dawid-Skene-result_ess_bulk.pdf", width = 8, height = 12)
 grid.arrange(plot1, plot2, ncol=1 , layout_matrix = cbind(c(1,1,1,2)))
-dev.off()
+#dev.off()
 ```
 

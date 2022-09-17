@@ -1,1 +1,2 @@
 load("/Users/wenzhang/Documents/Efficiency-of-marginalising-over-discrete-latent-parameters/Results/Dawid-Skene-result.rds")
+load("/Users/wenzhang/Documents/Efficiency-of-marginalising-over-discrete-latent-parameters/Results/Dawid-Skene-result-with-rater.rds")

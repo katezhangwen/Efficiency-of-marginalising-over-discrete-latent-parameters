@@ -59,10 +59,12 @@ dens_f <- function(n) {
   return(val)
 }
 
-dens <- 1:4
+dens <- c(1,3,2,4)
 dens_list <- lapply(dens, dens_f)
 dens_df <- data.frame()
 
+# swap data 3 and 2 for consistent ordering
+j<- 1
 for (i in dens) {
   dens_df <- rbind(
     dens_df, 
@@ -72,8 +74,9 @@ for (i in dens) {
       x = sample_pts
     )
   )
+  j <- j+1
 }
-dens_df$data <- factor(dens_df$data, levels = paste0("Data ", dens))
+dens_df$data <- factor(dens_df$data, levels = paste0("Data ", 1:4))
 dens_df$quantity <- factor("Density")
 ```
 
@@ -101,10 +104,10 @@ model_levels <- c("stan", "jags-full", "jags-marg-inbuilt", "jags-marg",
 quantity_levels <- c("Time per min Effective Sample", "Computation Time", 
                      "Min Effective Sample Size", "Rhat")
 
-result <- readRDS(here::here("Results","two-component-result_new_ess_bulk.rds"))
+result <- readRDS(here::here("Results","two-component-result_ess_bulk.rds"))
 
 result$model <- factor(result$model, levels = model_levels)
-result$data <- factor(result$data, levels = as.character(1:4), 
+result$data <- factor(result$data, levels = as.character(c(1,3,2,4)), 
                       labels = paste0("Data ", dens))
 result$quantity <- factor(result$quantity, levels = quantity_levels)
 result$trial <- factor(result$trial)
@@ -117,7 +120,7 @@ Log-scale plots with the same y-axis
 log_plot <- result %>%
   filter(quantity != "Rhat") %>%
   ggplot(aes(x = model, y = value, group = model)) + 
-  geom_boxplot(color = "black", fill = "steelblue", alpha = 0.5) + 
+  geom_boxplot(color = "black", fill = "gray", alpha = 0.5) + 
   facet_grid(quantity ~ data, scales = "free") + 
   scale_y_log10(
     breaks = trans_breaks("log10", function(x) 10^x), 
@@ -158,10 +161,10 @@ rhat_plot
 ```
 
 ```{r save-log-plot, fig.width = 8.5, fig.height = 10}
-pdf("two-component-mixture-log-result-new-ess-bulk-skewed.pdf", width = 18, height = 20)
+pdf("two-component-mixture-log-result_ess_bulk.pdf", width = 18, height = 20)
 grid.arrange(dens_plots, log_plot, rhat_plot, ncol = 1, 
-             layout_matrix = cbind(c(1, 2, 2, 2, 3)))
-#dev.off()
+            layout_matrix = cbind(c(1, 2, 2, 2, 3)))
+dev.off()
 ```
 
 For plots on different scales, we need to make plots for different quantities separately. 
@@ -205,7 +208,7 @@ rhat_plot2
 ```
 
 ```{r save-raw-plot, fig.width = 8.5, fig.height = 10}
-pdf("two-component-mixture-result-new-ess-bulk-skewed.pdf", width = 18, height = 20)
+pdf("two-component-mixture-result_ess_bulk.pdf", width = 18, height = 20)
 grid.arrange(
   dens_plots2 + scale_y_continuous(labels = number_format(accuracy = 0.001), 
                                    limits = c(0,0.15)),
